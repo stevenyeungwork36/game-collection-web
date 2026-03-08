@@ -4,6 +4,8 @@
 #   - Railway / Fly.io: same idea — build frontend, then run "npm start" (backend serves frontend from frontend/dist).
 #
 # If you only want frontend on Netlify and backend elsewhere, use the config below and point the frontend to your backend URL.
+# Required: In Netlify UI set env var VITE_API_BASE_URL = your Render URL (e.g. https://game-collection-web.onrender.com),
+# then trigger a new deploy so the build bakes it in.
 
 [build]
   # Install deps first (root + frontend); otherwise "vite: not found" because frontend/node_modules is missing

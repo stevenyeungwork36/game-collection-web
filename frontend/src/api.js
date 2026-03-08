@@ -9,3 +9,8 @@ export function apiUrl(path) {
   const p = path.startsWith('/') ? path : `/${path}`
   return `${API_BASE}${p}`
 }
+
+/** For debugging: in browser console, run window.__API_BASE__ to see the baked-in base URL. */
+if (typeof window !== 'undefined') {
+  window.__API_BASE__ = API_BASE
+}
