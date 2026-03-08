@@ -1,0 +1,22 @@
+export default function DrawerToggle({
+  onClick,
+  ariaLabel = 'Open menu',
+  stuckToDrawer = false,
+  drawerWidth = 260,
+}) {
+  return (
+    <button
+      type="button"
+      className="drawer-toggle"
+      onClick={onClick}
+      aria-label={ariaLabel}
+      style={{
+        left: stuckToDrawer ? `${drawerWidth}px` : '1rem',
+      }}
+    >
+      <span className="drawer-toggle-bar" />
+      <span className="drawer-toggle-bar" />
+      <span className="drawer-toggle-bar" />
+    </button>
+  )
+}

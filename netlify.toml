@@ -1,0 +1,16 @@
+# Netlify = static hosting only. Your Express backend in this repo does NOT run on Netlify.
+# To use the backend in the same directory, deploy the whole app to a Node host instead, e.g.:
+#   - Render.com: connect repo and use render.yaml, or set build = "npm run install:all && npm run build", start = "npm start", root dir = .
+#   - Railway / Fly.io: same idea — build frontend, then run "npm start" (backend serves frontend from frontend/dist).
+#
+# If you only want frontend on Netlify and backend elsewhere, use the config below and point the frontend to your backend URL.
+
+[build]
+  command = "npm run build:frontend"
+  publish = "frontend/dist"
+
+# SPA: serve index.html for all routes so React Router works when users open /games/bigtwo etc. directly
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
