@@ -1,10 +1,16 @@
+/**
+ * Exploding Kittens game: lobby, ready room, play (hand, toss area, draw pile), modals (favor, see future).
+ * Uses shared game-toolbar, ready-room layout, and card toss animation on play.
+ */
 import { useState, useEffect, useCallback } from 'react'
 import { useLanguage } from '../../context/LanguageContext'
 import { getTranslations } from '../../translations'
 import { apiUrl, apiFetch } from '../../api'
+import { getCardInfo, CARD_LIST_FOR_RULES } from './cardInfo'
 
 const POLL_INTERVAL_MS = 1500
 const COUNTDOWN_SECONDS = 5
+const TOSS_ANIMATION_MS = 650
 
 function isFoodType(type) {
   return type && type.startsWith('food_')
@@ -18,10 +24,12 @@ const PLAYABLE_ACTION_TYPES = new Set([
 export default function KittensGame() {
   const { lang } = useLanguage()
   const t = getTranslations(lang)
+
   const [roomId, setRoomId] = useState('')
   const [playerName, setPlayerName] = useState('')
   const [playerId, setPlayerId] = useState(null)
-  const [showJoinDialog, setShowJoinDialog] = useState(true)
+  const [showJoinDialog, setShowJoinDialog] = useState(false)
+  const [roomsList, setRoomsList] = useState([])
   const [joinError, setJoinError] = useState('')
   const [roomState, setRoomState] = useState(null)
   const [countdownLeft, setCountdownLeft] = useState(null)
@@ -29,11 +37,14 @@ export default function KittensGame() {
   const [rulesOpen, setRulesOpen] = useState(false)
   const [rulesLang, setRulesLang] = useState(lang)
   const [playError, setPlayError] = useState('')
-  const [favorTarget, setFavorTarget] = useState(null)
+  const [showFavorPlayerModal, setShowFavorPlayerModal] = useState(null)
   const [foodPairCard, setFoodPairCard] = useState(null)
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false)
   const [showSeeFuture, setShowSeeFuture] = useState(null)
   const [showIExploded, setShowIExploded] = useState(false)
   const [explodingPlayerId, setExplodingPlayerId] = useState(null)
+  const [expandedPlayedIndex, setExpandedPlayedIndex] = useState(null)
+  const [flyingCard, setFlyingCard] = useState(null)
 
   const join = useCallback(async () => {
     setJoinError('')
@@ -63,6 +74,34 @@ export default function KittensGame() {
       setShowJoinDialog(false)
     }
   }, [roomId, playerName, t.enterRoomAndName, t.joinFailed, t.networkError])
+
+  const fetchRooms = useCallback(async () => {
+    const { ok, data } = await apiFetch(apiUrl('/api/games/kittens/rooms'))
+    if (ok && Array.isArray(data)) setRoomsList(data)
+  }, [])
+
+  useEffect(() => {
+    if (!playerId && !showJoinDialog) fetchRooms()
+  }, [playerId, showJoinDialog, fetchRooms])
+
+  const createRoom = useCallback(() => {
+    const code = Math.random().toString(36).slice(2, 8).toUpperCase()
+    setRoomId(code)
+    setShowJoinDialog(true)
+  }, [])
+
+  const quitGame = useCallback(async () => {
+    if (!playerId || !roomId) return
+    await apiFetch(apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}/leave`), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ playerId }),
+    })
+    setPlayerId(null)
+    setRoomId('')
+    setRoomState(null)
+    setShowJoinDialog(false)
+  }, [playerId, roomId])
 
   useEffect(() => {
     if (!playerId || !roomId || showJoinDialog) return
@@ -106,6 +145,26 @@ export default function KittensGame() {
     if (ok) setHasPressedReady(true)
   }, [playerId, roomId])
 
+  const pressReadyForStart = useCallback(async () => {
+    if (!playerId || !roomId) return
+    const { ok, data } = await apiFetch(apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}/ready`), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ playerId }),
+    })
+    if (ok && data?.readyPlayers) setRoomState((s) => (s ? { ...s, readyPlayers: data.readyPlayers } : s))
+  }, [playerId, roomId])
+
+  const pressCancelReady = useCallback(async () => {
+    if (!playerId || !roomId) return
+    const { ok, data } = await apiFetch(apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}/cancel-ready`), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ playerId }),
+    })
+    if (ok && data?.readyPlayers) setRoomState((s) => (s ? { ...s, readyPlayers: data.readyPlayers } : s))
+  }, [playerId, roomId])
+
   const requestRestart = useCallback(async () => {
     if (!playerId || !roomId) return
     await apiFetch(apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}/restart`), {
@@ -135,10 +194,9 @@ export default function KittensGame() {
     if (next.ok && next.data) setRoomState(next.data)
   }, [playerId, roomId, t.networkError])
 
-  const playCard = useCallback(async (cardId, options = {}) => {
+  const playCard = useCallback(async (cardId, options = {}, onSuccess) => {
     if (!playerId || !roomId) return
     setPlayError('')
-    setFavorTarget(null)
     setFoodPairCard(null)
     const { ok, data, errorMessage } = await apiFetch(apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}/play`), {
       method: 'POST',
@@ -147,11 +205,13 @@ export default function KittensGame() {
     })
     if (!ok) {
       setPlayError(errorMessage || data?.error || t.networkError)
+      setFlyingCard(null)
       return
     }
     if (data?.seenCards) setShowSeeFuture(data.seenCards)
     const next = await apiFetch(apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}?playerId=${encodeURIComponent(playerId)}`))
     if (next.ok && next.data) setRoomState(next.data)
+    if (onSuccess) onSuccess()
   }, [playerId, roomId, t.networkError])
 
   const giveFavorCard = useCallback(async (cardId) => {
@@ -176,9 +236,61 @@ export default function KittensGame() {
   const eliminatedSet = new Set(roomState?.eliminated || [])
   const pendingFavor = roomState?.pendingFavor
   const pendingFavorWaiting = roomState?.pendingFavorWaiting
-  const canPlayAction = isMyTurn && roomState?.drawsRemaining <= 0 && !pendingFavor
-  const canDraw = isMyTurn && roomState?.drawsRemaining > 0 && !pendingFavor
+  const canPlayAction = isMyTurn && (roomState?.drawsRemaining ?? 1) > 0 && !pendingFavor
+  const canDraw = isMyTurn && (roomState?.drawsRemaining ?? 1) > 0 && !pendingFavor
   const playableTypes = PLAYABLE_ACTION_TYPES
+
+  if (!playerId && !showJoinDialog) {
+    return (
+      <div className="game-lobby">
+        <div className="game-lobby-toolbar">
+          <h2 className="game-lobby-title">{t.lobbyTitle}</h2>
+          <div className="game-lobby-actions">
+            <button type="button" className="kittens-btn" onClick={fetchRooms}>
+              {t.lobbyRefresh}
+            </button>
+            <button type="button" className="kittens-btn kittens-btn-primary" onClick={createRoom}>
+              {t.lobbyCreateRoom}
+            </button>
+          </div>
+        </div>
+        <div className="game-lobby-table-wrap">
+          <table className="game-lobby-table">
+            <thead>
+              <tr>
+                <th>{t.lobbyRoomNumber}</th>
+                <th>{t.lobbyPlayers}</th>
+                <th>{t.lobbyState}</th>
+                <th>{t.lobbyPassword}</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {roomsList.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="game-lobby-empty">{t.lobbyNoRooms}</td>
+                </tr>
+              ) : (
+                roomsList.map((room) => (
+                  <tr key={room.roomId}>
+                    <td>{room.roomId}</td>
+                    <td>{room.playerCount} / {room.minPlayers}</td>
+                    <td>{room.state}</td>
+                    <td>{room.hasPassword ? '🔒' : '—'}</td>
+                    <td>
+                      <button type="button" className="kittens-btn kittens-btn-sm" onClick={() => { setRoomId(room.roomId); setShowJoinDialog(true) }}>
+                        {t.lobbyJoin}
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )
+  }
 
   if (showJoinDialog) {
     return (
@@ -203,9 +315,14 @@ export default function KittensGame() {
             />
           </div>
           {joinError && <p className="kittens-error">{joinError}</p>}
-          <button type="button" className="kittens-btn" onClick={join}>
-            {t.kittensJoin}
-          </button>
+          <div className="kittens-join-buttons">
+            <button type="button" className="kittens-btn kittens-btn-outline" onClick={() => setShowJoinDialog(false)}>
+              {t.lobbyBackToLobby}
+            </button>
+            <button type="button" className="kittens-btn" onClick={join}>
+              {t.kittensJoin}
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -222,20 +339,50 @@ export default function KittensGame() {
   if (roomState.state === 'waiting_next_round') {
     return (
       <div className="kittens-state kittens-waiting-next">
+        <div className="game-room-badge">{t.roomLabel}: <strong>{roomId}</strong></div>
+        <p className="game-room-badge-hint">{t.roomCodeHint}</p>
         <h3>{t.roomLabel}: {roomId}</h3>
         <p className="kittens-waiting-next-msg">{t.imposterWaitingNext}</p>
         <p className="kittens-waiting-next-hint">{t.imposterStay}</p>
+        <button type="button" className="kittens-btn kittens-btn-outline kittens-quit-btn-block" onClick={quitGame}>{t.lobbyQuitGame}</button>
       </div>
     )
   }
 
   if (roomState.state === 'waiting') {
-    const needed = roomState.playersNeeded ?? Math.max(0, 2 - (roomState.players?.length || 0))
+    const players = roomState.players || []
+    const readyPlayers = roomState.readyPlayers || []
+    const amReady = readyPlayers.includes(playerId)
+    const needed = roomState.playersNeeded ?? Math.max(0, 2 - players.length)
     return (
-      <div className="kittens-state kittens-waiting">
-        <h3>{t.roomLabel}: {roomId}</h3>
+      <div className="kittens-state kittens-waiting ready-room-wrap">
+        <div className="game-toolbar ready-room-toolbar">
+          <div className="game-toolbar-left">
+            <span className="game-room-badge">{t.roomLabel}: <strong>{roomId}</strong></span>
+          </div>
+          <div className="game-toolbar-right">
+            <button type="button" className="game-toolbar-quit game-leaderboard-toggle" onClick={quitGame} title={t.lobbyQuitGame}>{t.lobbyQuitGame}</button>
+          </div>
+        </div>
+        <h3 className="ready-room-heading">{t.roomLabel}: {roomId}</h3>
         <p className="kittens-waiting-msg">{t.kittensWaiting.replace('{n}', needed)}</p>
-        <p className="kittens-waiting-count">{t.kittensWaitingCount.replace('{n}', roomState.players?.length || 0)}</p>
+        <p className="ready-room-title">{t.readyRoomTitle}</p>
+        <ul className="ready-room-list ready-room-grid">
+          {players.map((p) => (
+            <li key={p.id} className={readyPlayers.includes(p.id) ? 'ready' : ''}>
+              <span className="ready-room-player">{p.emoji} {p.name}</span>
+              {readyPlayers.includes(p.id) ? <span className="ready-room-check" aria-hidden="true"> ✓</span> : null}
+            </li>
+          ))}
+        </ul>
+        {amReady ? (
+          <>
+            <p className="ready-waiting-msg">{t.readyWaitingOthers}</p>
+            <button type="button" className="kittens-btn kittens-btn-outline game-leaderboard-toggle" onClick={pressCancelReady}>{t.cancelReadyBtn}</button>
+          </>
+        ) : (
+          <button type="button" className="kittens-btn game-leaderboard-toggle" onClick={pressReadyForStart}>{t.readyBtn}</button>
+        )}
       </div>
     )
   }
@@ -244,8 +391,11 @@ export default function KittensGame() {
     const secs = countdownLeft !== null ? countdownLeft : COUNTDOWN_SECONDS
     return (
       <div className="kittens-state kittens-countdown">
+        <div className="game-room-badge">{t.roomLabel}: <strong>{roomId}</strong></div>
+        <p className="game-room-badge-hint">{t.roomCodeHint}</p>
         <h3>{t.kittensGameStarting}</h3>
         <p className="kittens-countdown-num">{secs}</p>
+        <button type="button" className="kittens-btn kittens-btn-outline kittens-quit-btn-block" onClick={quitGame}>{t.lobbyQuitGame}</button>
       </div>
     )
   }
@@ -256,6 +406,8 @@ export default function KittensGame() {
     const allReady = roundPlayersResult.length > 0 && readyPlayers.length >= roundPlayersResult.length
     return (
       <div className="kittens-state kittens-result">
+        <div className="game-room-badge">{t.roomLabel}: <strong>{roomId}</strong></div>
+        <p className="game-room-badge-hint">{t.roomCodeHint}</p>
         <h3 className={roomState.winner === playerId ? 'kittens-result-title win' : 'kittens-result-title lose'}>
           {roomState.winner === playerId ? t.kittensYouWin : t.kittensGameOver}
         </h3>
@@ -270,6 +422,7 @@ export default function KittensGame() {
             </button>
           )}
         </div>
+        <button type="button" className="kittens-btn kittens-btn-outline kittens-quit-btn-block" onClick={quitGame}>{t.lobbyQuitGame}</button>
       </div>
     )
   }
@@ -281,6 +434,46 @@ export default function KittensGame() {
 
     return (
       <div className="kittens-play-wrap">
+        <div className="game-toolbar">
+          <div className="game-toolbar-left">
+            <span className="game-room-badge">{t.roomLabel}: <strong>{roomId}</strong></span>
+            <span className="game-room-badge-hint-inline">{t.roomCodeHint}</span>
+          </div>
+          <div className="game-toolbar-right">
+            <div className="game-leaderboard-wrap">
+              <button type="button" className="game-leaderboard-toggle" onClick={() => setLeaderboardOpen((o) => !o)} aria-expanded={leaderboardOpen}>
+                🏆 {t.leaderboard} {leaderboardOpen ? '▼' : '▶'}
+              </button>
+              {leaderboardOpen && (
+                <div className="game-leaderboard-panel">
+                  <table className="game-leaderboard-table">
+                    <thead>
+                      <tr>
+                        <th>{t.leaderboard}</th>
+                        <th>{t.leaderboardWins}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(() => {
+                        const counts = roomState.winnerCounts || {}
+                        const rows = roundPlayers.map((p) => ({ ...p, wins: counts[p.id] || 0 })).sort((a, b) => b.wins - a.wins)
+                        return rows.map((p) => (
+                          <tr key={p.id}>
+                            <td>{p.emoji} {p.name}</td>
+                            <td>{p.wins}</td>
+                          </tr>
+                        ))
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+            <button type="button" className="game-toolbar-quit game-leaderboard-toggle" onClick={quitGame} title={t.lobbyQuitGame}>
+              {t.lobbyQuitGame}
+            </button>
+          </div>
+        </div>
         {showIExploded && (
           <div className="kittens-explosion-screen" aria-hidden="true">
             <div className="kittens-explosion-burst" />
@@ -321,6 +514,20 @@ export default function KittensGame() {
             {rulesOpen && (
               <div className="kittens-rules-panel">
                 <p>{lang === 'zh' ? '出牌或抽牌。抽到爆炸貓且無拆彈即出局。' : 'Play or draw. Draw Exploding Kitten without Defuse to lose.'}</p>
+                <h4 className="kittens-rules-cards-title">{lang === 'zh' ? '牌面說明' : 'All cards'}</h4>
+                <ul className="kittens-rules-cards-list">
+                  {CARD_LIST_FOR_RULES.map((type) => {
+                    const info = getCardInfo(type)
+                    if (!info) return null
+                    return (
+                      <li key={type} className="kittens-rules-card-item">
+                        <span className="kittens-rules-card-emoji" aria-hidden="true">{info.emoji}</span>
+                        <span className="kittens-rules-card-name">{lang === 'zh' ? info.titleZh : info.titleEn}</span>
+                        <span className="kittens-rules-card-desc">{lang === 'zh' ? info.descZh : info.descEn}</span>
+                      </li>
+                    )
+                  })}
+                </ul>
               </div>
             )}
           </div>
@@ -372,34 +579,88 @@ export default function KittensGame() {
               {(roomState.playedCardsHistory || []).length === 0 ? (
                 <p className="kittens-toss-empty">{t.kittensTossEmpty}</p>
               ) : (
-                (roomState.playedCardsHistory || []).map((entry, i) => (
-                  <div key={i} className="kittens-toss-entry">
-                    <span className="kittens-toss-player">{entry.emoji} {entry.playerName}</span>
-                    <div className="kittens-toss-card">
-                      <span>{entry.cardEmoji || '🂠'}</span>
+                (roomState.playedCardsHistory || []).map((entry, i) => {
+                  const isExpanded = expandedPlayedIndex === i
+                  const cardInfo = getCardInfo(entry.type) || {}
+                  const title = lang === 'zh' ? cardInfo.titleZh : cardInfo.titleEn
+                  const desc = lang === 'zh' ? cardInfo.descZh : cardInfo.descEn
+                  return (
+                    <div
+                      key={i}
+                      className={`kittens-toss-entry ${isExpanded ? 'kittens-toss-entry-expanded' : ''}`}
+                    >
+                      <button
+                        type="button"
+                        className="kittens-toss-entry-btn"
+                        onClick={() => setExpandedPlayedIndex(isExpanded ? null : i)}
+                        aria-expanded={isExpanded}
+                        title={lang === 'zh' ? '點擊展開牌面' : 'Click to expand card'}
+                      >
+                        <span className="kittens-toss-player">{entry.emoji} {entry.playerName}</span>
+                        <span className="kittens-toss-card-emoji">{entry.cardEmoji || '🂠'}</span>
+                      </button>
+                      {isExpanded && (
+                        <div className="kittens-toss-expanded-card">
+                          <span className="kittens-toss-expanded-emoji">{cardInfo.emoji || entry.cardEmoji || '🂠'}</span>
+                          <span className="kittens-toss-expanded-title">{title || entry.type}</span>
+                          <span className="kittens-toss-expanded-desc">{desc || ''}</span>
+                          <button type="button" className="kittens-toss-expanded-close" onClick={(e) => { e.stopPropagation(); setExpandedPlayedIndex(null) }}>
+                            {lang === 'zh' ? '關閉' : 'Close'}
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))
+                  )
+                })
               )}
             </div>
           </div>
         </div>
 
-        {pendingFavorWaiting && (
-          <div className="kittens-pending-favor">
-            <p className="kittens-pending-favor-title">{t.kittensFavorGiveTo.replace('{name}', roundPlayers.find((x) => x.id === pendingFavorWaiting.fromPlayerId)?.name || '')}</p>
-            <div className="kittens-pending-favor-cards">
-              {myHand.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  className="kittens-favor-give-btn"
-                  onClick={() => giveFavorCard(c.id)}
-                >
-                  <span className="kittens-favor-give-emoji">{c.emoji}</span>
-                  <span className="kittens-favor-give-label">{lang === 'zh' ? c.titleZh : c.titleEn}</span>
-                </button>
-              ))}
+        {pendingFavor && (
+          <div className="kittens-favor-overlay" role="dialog" aria-modal="true" aria-labelledby="kittens-favor-overlay-title">
+            <div className="kittens-favor-overlay-box">
+              <h4 id="kittens-favor-overlay-title">{t.kittensFavorGiveTo.replace('{name}', roundPlayers.find((x) => x.id === pendingFavor.fromPlayerId)?.name || '')}</h4>
+              <p className="kittens-favor-overlay-hint">{lang === 'zh' ? '選一張牌給對方' : 'Choose a card to give'}</p>
+              <div className="kittens-pending-favor-cards">
+                {myHand.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className="kittens-favor-give-btn"
+                    onClick={() => giveFavorCard(c.id)}
+                  >
+                    <span className="kittens-favor-give-emoji">{c.emoji}</span>
+                    <span className="kittens-favor-give-label">{lang === 'zh' ? c.titleZh : c.titleEn}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showFavorPlayerModal && (
+          <div className="kittens-favor-overlay" role="dialog" aria-modal="true" aria-labelledby="kittens-favor-select-title" onClick={() => setShowFavorPlayerModal(null)}>
+            <div className="kittens-favor-overlay-box" onClick={(e) => e.stopPropagation()}>
+              <h4 id="kittens-favor-select-title">{t.kittensFavorSelectPlayer}</h4>
+              <div className="kittens-favor-picker-players">
+                {roundPlayers.filter((p) => p.id !== playerId && !eliminatedSet.has(p.id)).map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className="kittens-favor-picker-btn"
+                    onClick={() => {
+                      playCard(showFavorPlayerModal, { targetPlayerId: p.id })
+                      setShowFavorPlayerModal(null)
+                    }}
+                  >
+                    {p.emoji} {p.name}
+                  </button>
+                ))}
+              </div>
+              <button type="button" className="kittens-btn kittens-btn-outline" onClick={() => setShowFavorPlayerModal(null)}>
+                {lang === 'zh' ? '取消' : 'Cancel'}
+              </button>
             </div>
           </div>
         )}
@@ -418,38 +679,26 @@ export default function KittensGame() {
 
         {playError && <p className="kittens-error">{playError}</p>}
 
+        {flyingCard && (
+          <div className="kittens-card-fly kittens-card-fly-to-toss" aria-hidden="true">
+            <span>{flyingCard.emoji}</span>
+          </div>
+        )}
+
         <div className="kittens-hand">
           <div className="kittens-hand-cards">
             {myHand.map((card) => {
               const playable = canPlayAction && playableTypes.has(card.type) && card.type !== 'exploding_kitten' && card.type !== 'defuse'
-              const isFavor = card.type === 'favor' && favorTarget
               const isFoodPair = isFoodType(card.type) && foodPairCard && (foodPairCard.id === card.id || (roomState.myHand || []).some((c) => c.id === foodPairCard.id && c.type === card.type))
-              const canPlayThis = playable && (card.type !== 'favor' || favorTarget) && (!isFoodType(card.type) || (foodPairCard && foodPairCard.type === card.type && foodPairCard.id !== card.id))
+              const canPlayThis = playable && (!isFoodType(card.type) || (foodPairCard && foodPairCard.type === card.type && foodPairCard.id !== card.id))
               return (
                 <div
                   key={card.id}
-                  className={`kittens-card ${playable ? 'playable' : ''} ${isFavor ? 'kittens-card-selected-pair' : ''} ${isFoodPair ? 'kittens-card-can-pair' : ''}`}
+                  className={`kittens-card ${playable ? 'playable' : ''} ${isFoodPair ? 'kittens-card-can-pair' : ''}`}
                 >
                   <span className="kittens-card-emoji">{card.emoji}</span>
                   <span className="kittens-card-title">{lang === 'zh' ? card.titleZh : card.titleEn}</span>
                   <span className="kittens-card-desc">{lang === 'zh' ? card.descZh : card.descEn}</span>
-                  {card.type === 'favor' && playable && (
-                    <div className="kittens-favor-picker">
-                      <p className="kittens-favor-picker-title">{t.kittensFavorSelectPlayer}</p>
-                      <div className="kittens-favor-picker-players">
-                        {roundPlayers.filter((p) => p.id !== playerId && !eliminatedSet.has(p.id)).map((p) => (
-                          <button
-                            key={p.id}
-                            type="button"
-                            className={`kittens-favor-picker-btn ${favorTarget === p.id ? 'active' : ''}`}
-                            onClick={() => setFavorTarget(favorTarget === p.id ? null : p.id)}
-                          >
-                            {p.emoji} {p.name}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                   {isFoodType(card.type) && playable && (
                     <p className="kittens-food-hint">{t.kittensFoodSelectPair}</p>
                   )}
@@ -458,10 +707,16 @@ export default function KittensGame() {
                       type="button"
                       className="kittens-card-play"
                       onClick={() => {
-                        if (card.type === 'favor') playCard(card.id, { targetPlayerId: favorTarget })
-                        else if (isFoodType(card.type) && foodPairCard) playCard(card.id, { pairCardId: foodPairCard.id })
+                        if (card.type === 'favor') setShowFavorPlayerModal(card.id)
+                        else if (isFoodType(card.type) && foodPairCard) {
+                          setFlyingCard({ emoji: card.emoji })
+                          playCard(card.id, { pairCardId: foodPairCard.id }, () => setTimeout(() => setFlyingCard(null), TOSS_ANIMATION_MS))
+                        }
                         else if (isFoodType(card.type)) setFoodPairCard(foodPairCard ? null : card)
-                        else playCard(card.id)
+                        else {
+                          setFlyingCard({ emoji: card.emoji })
+                          playCard(card.id, {}, () => setTimeout(() => setFlyingCard(null), TOSS_ANIMATION_MS))
+                        }
                       }}
                     >
                       {t.kittensPlay}

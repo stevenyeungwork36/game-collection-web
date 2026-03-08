@@ -88,6 +88,7 @@ export function joinRoom(roomId, playerName) {
       votedOutPlayerId: null,
       result: null,
       readyPlayers: [],
+      winnerCounts: {},
       lastActivityAt: Date.now(),
     }
     rooms.set(roomId, room)
@@ -127,19 +128,14 @@ export function joinRoom(roomId, playerName) {
     const id = generatePlayerId()
     room.players.push({ id, name: playerName.trim(), emoji })
 
-    if (room.players.length >= MIN_PLAYERS) {
-      room.state = 'countdown'
-      room.countdownEndTime = Date.now() + COUNTDOWN_SECONDS * 1000
-    }
-
     return {
       success: true,
       playerId: id,
       roomId,
       state: room.state,
       players: room.players.map((p) => ({ id: p.id, name: p.name, emoji: p.emoji })),
-      playersNeeded: room.state === 'waiting' ? MIN_PLAYERS - room.players.length : 0,
-      countdownEndTime: room.countdownEndTime || undefined,
+      playersNeeded: MIN_PLAYERS - room.players.length,
+      readyPlayers: room.readyPlayers || [],
     }
   }
 
@@ -168,6 +164,16 @@ export function getRoomState(roomId, playerId) {
   if (!room) return null
   touchRoom(room)
 
+  if (room.state === 'waiting') {
+    room.readyPlayers = room.readyPlayers || []
+    const allReady = room.readyPlayers.length === room.players.length && room.players.length >= MIN_PLAYERS
+    if (allReady) {
+      room.state = 'countdown'
+      room.countdownEndTime = Date.now() + COUNTDOWN_SECONDS * 1000
+      room.readyPlayers = []
+    }
+  }
+
   if (room.state === 'countdown' && Date.now() >= room.countdownEndTime) {
     room.state = 'word'
     const words = loadWords()
@@ -192,7 +198,9 @@ export function getRoomState(roomId, playerId) {
     state: room.state,
     players: room.players.map((p) => ({ id: p.id, name: p.name, emoji: p.emoji })),
     playersNeeded: room.state === 'waiting' ? MIN_PLAYERS - room.players.length : 0,
+    readyPlayers: room.state === 'waiting' ? (room.readyPlayers || []) : [],
     roundPlayers: room.currentRoundPlayers?.map((p) => ({ id: p.id, name: p.name, emoji: p.emoji })) || [],
+    winnerCounts: room.winnerCounts || {},
   }
 
   if (room.state === 'countdown') {
@@ -219,6 +227,28 @@ export function getRoomState(roomId, playerId) {
   }
 
   return base
+}
+
+export function setReady(roomId, playerId) {
+  const room = rooms.get(roomId)
+  if (!room) return { success: false, error: 'Room not found' }
+  if (room.state !== 'waiting') return { success: false, error: 'Not in waiting' }
+  if (!room.players.some((p) => p.id === playerId)) return { success: false, error: 'Not in room' }
+  touchRoom(room)
+  room.readyPlayers = room.readyPlayers || []
+  if (!room.readyPlayers.includes(playerId)) room.readyPlayers.push(playerId)
+  return { success: true, readyPlayers: room.readyPlayers }
+}
+
+export function cancelReady(roomId, playerId) {
+  const room = rooms.get(roomId)
+  if (!room) return { success: false, error: 'Room not found' }
+  if (room.state !== 'waiting') return { success: false, error: 'Not in waiting' }
+  if (!room.players.some((p) => p.id === playerId)) return { success: false, error: 'Not in room' }
+  touchRoom(room)
+  room.readyPlayers = room.readyPlayers || []
+  room.readyPlayers = room.readyPlayers.filter((id) => id !== playerId)
+  return { success: true, readyPlayers: room.readyPlayers }
 }
 
 export function ready(roomId, playerId) {
@@ -285,6 +315,14 @@ export function vote(roomId, playerId, votedForPlayerId) {
   room.result = votedOut === room.imposterPlayerId ? 'crew_win' : 'imposter_win'
   room.state = 'result'
   room.readyPlayers = []
+  room.winnerCounts = room.winnerCounts || {}
+  if (room.result === 'crew_win') {
+    room.currentRoundPlayers.forEach((p) => {
+      if (p.id !== room.imposterPlayerId) room.winnerCounts[p.id] = (room.winnerCounts[p.id] || 0) + 1
+    })
+  } else {
+    room.winnerCounts[room.imposterPlayerId] = (room.winnerCounts[room.imposterPlayerId] || 0) + 1
+  }
 
   return {
     success: true,
@@ -293,4 +331,40 @@ export function vote(roomId, playerId, votedForPlayerId) {
     votedOutPlayerId: room.votedOutPlayerId,
     imposterPlayerId: room.imposterPlayerId,
   }
+}
+
+export function listRooms() {
+  cleanupInactiveRooms()
+  return [...rooms.entries()].map(([roomId, r]) => ({
+    roomId,
+    playerCount: r.players?.length ?? 0,
+    state: r.state ?? 'waiting',
+    minPlayers: MIN_PLAYERS,
+    hasPassword: false,
+  }))
+}
+
+export function leaveRoom(roomId, playerId) {
+  const room = rooms.get(roomId)
+  if (!room) return { success: false, error: 'Room not found' }
+  room.players = (room.players || []).filter((p) => p.id !== playerId)
+  if (room.players.length === 0) {
+    rooms.delete(roomId)
+    return { success: true }
+  }
+  // Someone left: reset room to waiting so everyone else returns to ready/lobby
+  if (room.state !== 'waiting') {
+    room.state = 'waiting'
+    room.currentRoundPlayers = null
+    room.countdownEndTime = null
+    room.imposterPlayerId = null
+    room.normalWord = null
+    room.imposterWord = null
+    room.wordPhaseEndTime = null
+    room.votes = {}
+    room.votedOutPlayerId = null
+    room.result = null
+    room.readyPlayers = []
+  }
+  return { success: true }
 }

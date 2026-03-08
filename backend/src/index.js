@@ -92,6 +92,30 @@ app.post('/api/games/imposter/join', (req, res) => {
   }
 })
 
+app.get('/api/games/imposter/rooms', (req, res) => {
+  try {
+    const rooms = imposter.listRooms()
+    res.json(rooms)
+  } catch (err) {
+    console.error('[ERROR] GET /api/games/imposter/rooms', err)
+    res.status(500).json({ error: 'Failed to list rooms' })
+  }
+})
+
+app.post('/api/games/imposter/rooms/:roomId/leave', (req, res) => {
+  try {
+    const { roomId } = req.params
+    const { playerId } = req.body || {}
+    if (!playerId) return res.status(400).json({ error: 'playerId required' })
+    const result = imposter.leaveRoom(roomId, playerId)
+    if (!result.success) return res.status(400).json({ error: result.error })
+    res.json(result)
+  } catch (err) {
+    console.error('[ERROR] POST /api/games/imposter/rooms/:roomId/leave', err)
+    res.status(500).json({ error: 'Leave failed' })
+  }
+})
+
 app.get('/api/games/imposter/rooms/:roomId', (req, res) => {
   try {
     const { roomId } = req.params
@@ -133,14 +157,31 @@ app.post('/api/games/imposter/rooms/:roomId/ready', (req, res) => {
     const { roomId } = req.params
     const { playerId } = req.body || {}
     if (!playerId) return res.status(400).json({ error: 'playerId required' })
-    const result = imposter.ready(roomId, playerId)
-    if (!result.success) {
-      return res.status(400).json({ error: result.error })
+    const setResult = imposter.setReady(roomId, playerId)
+    if (setResult.success) return res.json(setResult)
+    if (setResult.error === 'Not in waiting') {
+      const result = imposter.ready(roomId, playerId)
+      if (!result.success) return res.status(400).json({ error: result.error })
+      return res.json(result)
     }
-    res.json(result)
+    return res.status(400).json({ error: setResult.error })
   } catch (err) {
     console.error('[ERROR]', err)
     res.status(500).json({ error: 'Ready failed' })
+  }
+})
+
+app.post('/api/games/imposter/rooms/:roomId/cancel-ready', (req, res) => {
+  try {
+    const { roomId } = req.params
+    const { playerId } = req.body || {}
+    if (!playerId) return res.status(400).json({ error: 'playerId required' })
+    const result = imposter.cancelReady(roomId, playerId)
+    if (!result.success) return res.status(400).json({ error: result.error })
+    res.json(result)
+  } catch (err) {
+    console.error('[ERROR]', err)
+    res.status(500).json({ error: 'Cancel ready failed' })
   }
 })
 
@@ -159,6 +200,58 @@ app.post('/api/games/kittens/join', (req, res) => {
   } catch (err) {
     console.error('[ERROR]', err)
     res.status(500).json({ error: 'Join failed' })
+  }
+})
+
+app.get('/api/games/kittens/rooms', (req, res) => {
+  try {
+    const rooms = kittens.listRooms()
+    res.json(rooms)
+  } catch (err) {
+    console.error('[ERROR] GET /api/games/kittens/rooms', err)
+    res.status(500).json({ error: 'Failed to list rooms' })
+  }
+})
+
+app.post('/api/games/kittens/rooms/:roomId/leave', (req, res) => {
+  try {
+    const { roomId } = req.params
+    const { playerId } = req.body || {}
+    if (!playerId) return res.status(400).json({ error: 'playerId required' })
+    const result = kittens.leaveRoom(roomId, playerId)
+    if (!result.success) return res.status(400).json({ error: result.error })
+    res.json(result)
+  } catch (err) {
+    console.error('[ERROR] POST /api/games/kittens/rooms/:roomId/leave', err)
+    res.status(500).json({ error: 'Leave failed' })
+  }
+})
+
+app.post('/api/games/kittens/rooms/:roomId/ready', (req, res) => {
+  try {
+    const { roomId } = req.params
+    const { playerId } = req.body || {}
+    if (!playerId) return res.status(400).json({ error: 'playerId required' })
+    const result = kittens.setReady(roomId, playerId)
+    if (!result.success) return res.status(400).json({ error: result.error })
+    res.json(result)
+  } catch (err) {
+    console.error('[ERROR] POST /api/games/kittens/rooms/:roomId/ready', err)
+    res.status(500).json({ error: 'Ready failed' })
+  }
+})
+
+app.post('/api/games/kittens/rooms/:roomId/cancel-ready', (req, res) => {
+  try {
+    const { roomId } = req.params
+    const { playerId } = req.body || {}
+    if (!playerId) return res.status(400).json({ error: 'playerId required' })
+    const result = kittens.cancelReady(roomId, playerId)
+    if (!result.success) return res.status(400).json({ error: result.error })
+    res.json(result)
+  } catch (err) {
+    console.error('[ERROR] POST /api/games/kittens/rooms/:roomId/cancel-ready', err)
+    res.status(500).json({ error: 'Cancel ready failed' })
   }
 })
 
@@ -262,6 +355,30 @@ app.post('/api/games/bigtwo/join', (req, res) => {
   }
 })
 
+app.get('/api/games/bigtwo/rooms', (req, res) => {
+  try {
+    const rooms = bigtwo.listRooms()
+    res.json(rooms)
+  } catch (err) {
+    console.error('[ERROR] GET /api/games/bigtwo/rooms', err)
+    res.status(500).json({ error: 'Failed to list rooms' })
+  }
+})
+
+app.post('/api/games/bigtwo/rooms/:roomId/leave', (req, res) => {
+  try {
+    const { roomId } = req.params
+    const { playerId } = req.body || {}
+    if (!playerId) return res.status(400).json({ error: 'playerId required' })
+    const result = bigtwo.leaveRoom(roomId, playerId)
+    if (!result.success) return res.status(400).json({ error: result.error })
+    res.json(result)
+  } catch (err) {
+    console.error('[ERROR] POST /api/games/bigtwo/rooms/:roomId/leave', err)
+    res.status(500).json({ error: 'Leave failed' })
+  }
+})
+
 app.get('/api/games/bigtwo/rooms/:roomId', (req, res) => {
   try {
     const { roomId } = req.params
@@ -309,12 +426,31 @@ app.post('/api/games/bigtwo/rooms/:roomId/ready', (req, res) => {
     const { roomId } = req.params
     const { playerId } = req.body || {}
     if (!playerId) return res.status(400).json({ error: 'playerId required' })
-    const result = bigtwo.ready(roomId, playerId)
+    const setResult = bigtwo.setReady(roomId, playerId)
+    if (setResult.success) return res.json(setResult)
+    if (setResult.error === 'Not in waiting') {
+      const result = bigtwo.ready(roomId, playerId)
+      if (!result.success) return res.status(400).json({ error: result.error })
+      return res.json(result)
+    }
+    return res.status(400).json({ error: setResult.error })
+  } catch (err) {
+    console.error('[ERROR]', err)
+    res.status(500).json({ error: 'Ready failed' })
+  }
+})
+
+app.post('/api/games/bigtwo/rooms/:roomId/cancel-ready', (req, res) => {
+  try {
+    const { roomId } = req.params
+    const { playerId } = req.body || {}
+    if (!playerId) return res.status(400).json({ error: 'playerId required' })
+    const result = bigtwo.cancelReady(roomId, playerId)
     if (!result.success) return res.status(400).json({ error: result.error })
     res.json(result)
   } catch (err) {
     console.error('[ERROR]', err)
-    res.status(500).json({ error: 'Ready failed' })
+    res.status(500).json({ error: 'Cancel ready failed' })
   }
 })
 

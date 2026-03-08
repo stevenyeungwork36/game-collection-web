@@ -387,6 +387,333 @@ body {
   margin-bottom: 2rem;
 }
 
+/* -------------------------------------------------------------------------
+   Game lobby (room list + create + join)
+   ------------------------------------------------------------------------- */
+.game-lobby {
+  max-width: 56rem;
+  margin: 0 auto;
+}
+
+.game-lobby-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.game-lobby-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.game-lobby-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.game-lobby-table-wrap {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.game-lobby-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+.game-lobby-table th,
+.game-lobby-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.game-lobby-table th {
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg);
+}
+
+.game-lobby-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.game-lobby-table tbody tr:hover {
+  background: var(--accent-soft);
+}
+
+.game-lobby-empty {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 2rem !important;
+}
+
+.kittens-join-buttons,
+.imposter-join-buttons,
+.bigtwo-join-buttons {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.bigtwo-quit-btn {
+  padding: 0.5rem 0.9rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  font-family: inherit;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.bigtwo-quit-btn:hover {
+  background: var(--accent-hover);
+}
+
+.kittens-quit-btn-block,
+.imposter-quit-block,
+.bigtwo-quit-block {
+  margin-top: 1rem;
+}
+
+.kittens-btn-sm,
+.imposter-btn-sm,
+.bigtwo-btn-sm {
+  font-size: 0.8125rem;
+  padding: 0.35rem 0.65rem;
+}
+
+.kittens-btn-primary,
+.imposter-btn-primary,
+.bigtwo-btn-primary {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+
+.bigtwo-top-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.game-room-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  margin-bottom: 0.75rem;
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  font-size: 0.9375rem;
+  color: var(--text);
+}
+
+.game-room-badge strong {
+  font-family: ui-monospace, monospace;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+.game-room-badge-hint {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+}
+
+.game-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.game-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.game-toolbar-left .game-room-badge {
+  margin-bottom: 0;
+}
+
+.game-room-badge-hint-inline {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.game-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  position: relative;
+}
+
+.game-toolbar-right .game-leaderboard-wrap {
+  position: relative;
+  top: auto;
+  right: auto;
+}
+
+.game-toolbar-quit {
+  flex-shrink: 0;
+}
+
+/* ----- Ready room (waiting lobby) ----- */
+.ready-room-wrap {
+  padding: 1.5rem 1rem;
+  max-width: 560px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.ready-room-wrap .game-toolbar {
+  margin-bottom: 1.25rem;
+  text-align: left;
+}
+
+.ready-room-heading {
+  margin: 0 0 1rem;
+  font-size: 1.25rem;
+}
+
+.ready-room-wrap .kittens-waiting-msg,
+.ready-room-wrap .imposter-waiting-msg,
+.ready-room-wrap .bigtwo-waiting-msg {
+  margin: 0 0 1.25rem;
+}
+
+.ready-room-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 0.75rem;
+}
+
+.ready-room-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.5rem;
+  text-align: left;
+}
+
+.ready-room-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  max-width: 520px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (max-width: 480px) {
+  .ready-room-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.ready-room-list li {
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+
+.ready-room-list li.ready {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.ready-room-player {
+  font-weight: 500;
+}
+
+.ready-room-check {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.ready-waiting-msg {
+  font-size: 0.9375rem;
+  color: var(--text-muted);
+  margin: 1rem 0 0.5rem;
+}
+
+/* ----- Game toolbar (room badge + leaderboard + quit) ----- */
+.game-leaderboard-wrap {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 10;
+}
+
+.game-leaderboard-toggle {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.8125rem;
+  color: var(--text);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.game-leaderboard-toggle:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.game-leaderboard-panel {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.35rem;
+  padding: 0.75rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 4px 20px var(--shadow);
+  min-width: 140px;
+}
+
+.game-leaderboard-table {
+  width: 100%;
+  font-size: 0.875rem;
+  border-collapse: collapse;
+}
+
+.game-leaderboard-table th,
+.game-leaderboard-table td {
+  padding: 0.35rem 0.5rem;
+  text-align: left;
+}
+
+.game-leaderboard-table th {
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
 .settings-section {
   margin-bottom: 2rem;
 }
@@ -614,10 +941,20 @@ body {
   cursor: not-allowed;
 }
 
+.imposter-btn-outline {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
 .imposter-state {
   text-align: center;
   padding: 2rem 1rem;
   color: var(--text);
+}
+
+.imposter-state-with-leaderboard {
+  position: relative;
 }
 
 .imposter-waiting {
@@ -903,11 +1240,14 @@ body {
 }
 
 .kittens-play-wrap {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 1rem;
   padding-bottom: 1rem;
   min-height: 70vh;
+  max-width: 900px;
+  margin: 0 auto;
 }
 
 .kittens-top-bar {
@@ -937,6 +1277,7 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
+  width: 64px;
 }
 
 .kittens-draw-pile-card {
@@ -950,6 +1291,26 @@ body {
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 8px var(--shadow);
+}
+
+.kittens-draw-pile .kittens-draw-btn {
+  width: 100%;
+  min-width: 0;
+  max-width: 64px;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.8125rem;
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.kittens-draw-pile .kittens-draw-btn:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
 }
 
 .kittens-draw-btn-center {
@@ -1054,18 +1415,89 @@ body {
 
 .kittens-toss-entry {
   display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
+  position: relative;
+}
+
+.kittens-toss-entry-btn {
+  display: inline-flex;
   align-items: center;
   gap: 0.35rem;
   padding: 0.35rem 0.6rem;
   border-radius: 8px;
   background: var(--bg);
   border: 1px solid var(--border);
+  cursor: pointer;
+  font-family: inherit;
   font-size: 0.8125rem;
   color: var(--text);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.kittens-toss-entry-btn:hover {
+  background: var(--bg-elevated);
+  border-color: var(--accent);
+}
+
+.kittens-toss-entry-expanded .kittens-toss-entry-btn {
+  border-color: var(--accent);
+  background: var(--accent-soft);
 }
 
 .kittens-toss-player {
   font-weight: 500;
+}
+
+.kittens-toss-card-emoji {
+  font-size: 1.1em;
+}
+
+.kittens-toss-expanded-card {
+  padding: 0.75rem;
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  min-width: 200px;
+  box-shadow: 0 4px 16px var(--shadow);
+}
+
+.kittens-toss-expanded-emoji {
+  font-size: 2rem;
+}
+
+.kittens-toss-expanded-title {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--text);
+}
+
+.kittens-toss-expanded-desc {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.kittens-toss-expanded-close {
+  margin-top: 0.25rem;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8125rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.kittens-toss-expanded-close:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
 }
 
 .kittens-toss-card {
@@ -1110,7 +1542,11 @@ body {
 @keyframes kittens-fly-to-toss {
   0% {
     opacity: 1;
-    transform: translateX(-50%) translateY(120px) scale(0.9);
+    transform: translateX(-50%) translateY(140px) scale(0.85);
+  }
+  45% {
+    opacity: 1;
+    transform: translateX(calc(-50% - 8px)) translateY(50px) scale(1.02);
   }
   100% {
     opacity: 1;
@@ -1159,20 +1595,66 @@ body {
   background: var(--accent-soft);
 }
 
+/* Exploding Kittens: rules panel (align with ready-room width) */
 .kittens-rules-panel {
   margin-top: 0.5rem;
-  padding: 1rem;
-  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   font-size: 0.875rem;
   text-align: left;
   color: var(--text-muted);
+  max-width: 560px;
 }
 
 .kittens-rules-panel p,
 .kittens-rules-panel ul {
   margin-bottom: 0.5rem;
+}
+
+.kittens-rules-cards-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0.75rem 0 0.35rem;
+}
+
+.kittens-rules-cards-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.kittens-rules-card-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.kittens-rules-card-item:last-child {
+  border-bottom: none;
+}
+
+.kittens-rules-card-emoji {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.kittens-rules-card-name {
+  font-weight: 600;
+  color: var(--text);
+  min-width: 6em;
+}
+
+.kittens-rules-card-desc {
+  flex: 1;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.35;
 }
 
 .kittens-rules-lang {
@@ -1386,6 +1868,37 @@ body {
 
 .kittens-draw-btn {
   min-width: 140px;
+  padding: 0.6rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 500;
+  font-family: inherit;
+  border: none;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.kittens-draw-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.kittens-quit-btn {
+  padding: 0.5rem 0.9rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  font-family: inherit;
+  border: none;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.kittens-quit-btn:hover {
+  background: var(--accent-hover);
 }
 
 .kittens-card-selected-pair {
@@ -1440,6 +1953,39 @@ body {
 
 .kittens-btn-outline:hover {
   background: rgba(255, 255, 255, 0.05);
+}
+
+.kittens-favor-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 1rem;
+}
+
+.kittens-favor-overlay-box {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  max-width: 360px;
+  width: 100%;
+  box-shadow: 0 12px 40px var(--shadow);
+}
+
+.kittens-favor-overlay-box h4 {
+  margin: 0 0 0.5rem;
+  font-size: 1.125rem;
+  color: var(--text);
+}
+
+.kittens-favor-overlay-hint {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin: 0 0 1rem;
 }
 
 .kittens-pending-favor {
@@ -1683,6 +2229,7 @@ body {
 .bigtwo-result-continue { margin-top: 1rem; }
 
 .bigtwo-play-wrap {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -1703,12 +2250,13 @@ body {
 }
 .bigtwo-rules-panel {
   margin-top: 0.75rem;
-  padding: 1rem;
+  padding: 1rem 1.25rem;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: 12px;
   font-size: 0.875rem;
   color: var(--text);
+  max-width: 560px;
 }
 .bigtwo-rules-panel ul { margin: 0.5rem 0; padding-left: 1.25rem; }
 .bigtwo-suit-list { list-style: none; padding-left: 0; }
@@ -1812,22 +2360,56 @@ body {
   max-height: 220px;
   overflow-y: auto;
 }
-.bigtwo-history-list { list-style: none; padding: 0; margin: 0; }
-.bigtwo-history-entry {
-  padding: 0.5rem 0;
-  border-bottom: 1px solid var(--border);
+
+.bigtwo-history-toss-style {
+  min-height: 80px;
+  border-radius: 12px;
 }
-.bigtwo-history-entry:last-child { border-bottom: none; }
-.bigtwo-history-player { font-size: 0.8125rem; margin-right: 0.5rem; }
+
+.bigtwo-history-panel-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.bigtwo-history-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.bigtwo-history-entry {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.bigtwo-history-player {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  margin-right: 0.25rem;
+}
+
 .bigtwo-history-cards {
   display: flex;
   flex-wrap: wrap;
   gap: 0.2rem;
-  margin-top: 0.35rem;
+  margin-top: 0;
 }
 .bigtwo-history-panel .bigtwo-history-card {
-  width: 32px;
-  min-width: 32px;
+  width: 48px;
+  min-width: 48px;
   min-height: 0;
   aspect-ratio: 2.5 / 3.5;
 }
@@ -1836,7 +2418,7 @@ body {
   height: 100%;
   object-fit: contain;
 }
-.bigtwo-history-panel .bigtwo-history-card .bigtwo-card-text { font-size: 0.5rem; }
+.bigtwo-history-panel .bigtwo-history-card .bigtwo-card-text { font-size: 0.6rem; }
 .bigtwo-history-empty { font-size: 0.875rem; color: var(--text-muted); margin: 0; }
 
 .bigtwo-hand {

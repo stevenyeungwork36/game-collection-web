@@ -1,3 +1,4 @@
+/** Big Two (鋤大弟): lobby, ready room, play (table, hand, history). Uses shared game-toolbar and ready-room layout. */
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { RULES_EN, RULES_ZH, RULES_SUIT_ORDER_CARDS, RULES_RANK_ORDER_CARDS, RULES_COMBO_EXAMPLES } from './rules'
 import CardFace from './CardFace'
@@ -16,12 +17,14 @@ export default function BigTwoGame() {
   const [roomId, setRoomId] = useState('')
   const [playerName, setPlayerName] = useState('')
   const [playerId, setPlayerId] = useState(null)
-  const [showJoinDialog, setShowJoinDialog] = useState(true)
+  const [showJoinDialog, setShowJoinDialog] = useState(false)
+  const [roomsList, setRoomsList] = useState([])
   const [joinError, setJoinError] = useState('')
   const [roomState, setRoomState] = useState(null)
   const [countdownLeft, setCountdownLeft] = useState(null)
   const [rulesOpen, setRulesOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false)
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [playError, setPlayError] = useState('')
   const [hasPressedReady, setHasPressedReady] = useState(false)
@@ -61,6 +64,37 @@ export default function BigTwoGame() {
       setJoinError(t.networkError)
     }
   }, [roomId, playerName, t.enterRoomAndName, t.joinFailed, t.networkError])
+
+  const fetchRooms = useCallback(async () => {
+    const res = await fetch(apiUrl('/api/games/bigtwo/rooms'))
+    if (!res.ok) return
+    const data = await res.json()
+    if (Array.isArray(data)) setRoomsList(data)
+  }, [])
+
+  useEffect(() => {
+    if (!playerId && !showJoinDialog) fetchRooms()
+  }, [playerId, showJoinDialog, fetchRooms])
+
+  const createRoom = useCallback(() => {
+    setRoomId(Math.random().toString(36).slice(2, 8).toUpperCase())
+    setShowJoinDialog(true)
+  }, [])
+
+  const quitGame = useCallback(async () => {
+    if (!playerId || !roomId) return
+    try {
+      await fetch(apiUrl(`/api/games/bigtwo/rooms/${encodeURIComponent(roomId)}/leave`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerId }),
+      })
+    } catch {}
+    setPlayerId(null)
+    setRoomId('')
+    setRoomState(null)
+    setShowJoinDialog(false)
+  }, [playerId, roomId])
 
   useEffect(() => {
     if (!playerId || !roomId || showJoinDialog) return
@@ -184,6 +218,32 @@ export default function BigTwoGame() {
     }
   }, [playerId, roomId, t.failed, t.networkError])
 
+  const pressReadyForStart = useCallback(async () => {
+    if (!playerId || !roomId) return
+    try {
+      const res = await fetch(apiUrl(`/api/games/bigtwo/rooms/${encodeURIComponent(roomId)}/ready`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerId }),
+      })
+      const data = await res.json()
+      if (res.ok && data?.readyPlayers) setRoomState((prev) => (prev ? { ...prev, readyPlayers: data.readyPlayers } : prev))
+    } catch {}
+  }, [playerId, roomId])
+
+  const pressCancelReady = useCallback(async () => {
+    if (!playerId || !roomId) return
+    try {
+      const res = await fetch(apiUrl(`/api/games/bigtwo/rooms/${encodeURIComponent(roomId)}/cancel-ready`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerId }),
+      })
+      const data = await res.json()
+      if (res.ok && data?.readyPlayers) setRoomState((prev) => (prev ? { ...prev, readyPlayers: data.readyPlayers } : prev))
+    } catch {}
+  }, [playerId, roomId])
+
   const pressReady = useCallback(async () => {
     if (!playerId || !roomId) return
     setHasPressedReady(true)
@@ -212,6 +272,50 @@ export default function BigTwoGame() {
 
   const rules = lang === 'zh' ? RULES_ZH : RULES_EN
 
+  if (!playerId && !showJoinDialog) {
+    return (
+      <div className="game-lobby">
+        <div className="game-lobby-toolbar">
+          <h2 className="game-lobby-title">{t.lobbyTitle}</h2>
+          <div className="game-lobby-actions">
+            <button type="button" className="bigtwo-btn" onClick={fetchRooms}>{t.lobbyRefresh}</button>
+            <button type="button" className="bigtwo-btn bigtwo-btn-primary" onClick={createRoom}>{t.lobbyCreateRoom}</button>
+          </div>
+        </div>
+        <div className="game-lobby-table-wrap">
+          <table className="game-lobby-table">
+            <thead>
+              <tr>
+                <th>{t.lobbyRoomNumber}</th>
+                <th>{t.lobbyPlayers}</th>
+                <th>{t.lobbyState}</th>
+                <th>{t.lobbyPassword}</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {roomsList.length === 0 ? (
+                <tr><td colSpan={5} className="game-lobby-empty">{t.lobbyNoRooms}</td></tr>
+              ) : (
+                roomsList.map((room) => (
+                  <tr key={room.roomId}>
+                    <td>{room.roomId}</td>
+                    <td>{room.playerCount} / {room.minPlayers}</td>
+                    <td>{room.state}</td>
+                    <td>{room.hasPassword ? '🔒' : '—'}</td>
+                    <td>
+                      <button type="button" className="bigtwo-btn bigtwo-btn-sm" onClick={() => { setRoomId(room.roomId); setShowJoinDialog(true) }}>{t.lobbyJoin}</button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )
+  }
+
   if (showJoinDialog) {
     return (
       <div className="bigtwo-join">
@@ -237,9 +341,10 @@ export default function BigTwoGame() {
             />
           </div>
           {joinError && <p className="bigtwo-error">{joinError}</p>}
-          <button type="button" className="bigtwo-btn" onClick={join}>
-            {t.bigtwoJoin}
-          </button>
+          <div className="bigtwo-join-buttons">
+            <button type="button" className="bigtwo-btn bigtwo-btn-outline" onClick={() => setShowJoinDialog(false)}>{t.lobbyBackToLobby}</button>
+            <button type="button" className="bigtwo-btn" onClick={join}>{t.bigtwoJoin}</button>
+          </div>
         </div>
       </div>
     )
@@ -253,13 +358,79 @@ export default function BigTwoGame() {
     )
   }
 
+  const renderToolbar = (playersForLeaderboard = []) => (
+    <div className="game-toolbar">
+      <div className="game-toolbar-left">
+        <span className="game-room-badge">{t.roomLabel}: <strong>{roomId}</strong></span>
+        <span className="game-room-badge-hint-inline">{t.roomCodeHint}</span>
+      </div>
+      <div className="game-toolbar-right">
+        <div className="game-leaderboard-wrap">
+          <button type="button" className="game-leaderboard-toggle" onClick={() => setLeaderboardOpen((o) => !o)} aria-expanded={leaderboardOpen}>
+            🏆 {t.leaderboard} {leaderboardOpen ? '▼' : '▶'}
+          </button>
+          {leaderboardOpen && (
+            <div className="game-leaderboard-panel">
+              <table className="game-leaderboard-table">
+                <thead>
+                  <tr><th>{t.leaderboard}</th><th>{t.leaderboardWins}</th></tr>
+                </thead>
+                <tbody>
+                  {(() => {
+                    const counts = roomState.winnerCounts || {}
+                    const rows = (playersForLeaderboard.length ? playersForLeaderboard : roomState.players || []).map((p) => ({ ...p, wins: counts[p.id] || 0 })).sort((a, b) => b.wins - a.wins)
+                    return rows.map((p) => (
+                      <tr key={p.id}><td>{p.emoji} {p.name}</td><td>{p.wins}</td></tr>
+                    ))
+                  })()}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+        <button type="button" className="game-toolbar-quit game-leaderboard-toggle" onClick={quitGame} title={t.lobbyQuitGame}>{t.lobbyQuitGame}</button>
+      </div>
+    </div>
+  )
+
+  const renderReadyRoomToolbar = () => (
+    <div className="game-toolbar ready-room-toolbar">
+      <div className="game-toolbar-left">
+        <span className="game-room-badge">{t.roomLabel}: <strong>{roomId}</strong></span>
+      </div>
+      <div className="game-toolbar-right">
+        <button type="button" className="game-toolbar-quit game-leaderboard-toggle" onClick={quitGame} title={t.lobbyQuitGame}>{t.lobbyQuitGame}</button>
+      </div>
+    </div>
+  )
+
   if (roomState.state === 'waiting') {
-    const needed = roomState.playersNeeded ?? Math.max(0, 3 - (roomState.players?.length || 0))
+    const players = roomState.players || []
+    const readyPlayers = roomState.readyPlayers || []
+    const amReady = readyPlayers.includes(playerId)
+    const needed = roomState.playersNeeded ?? Math.max(0, 3 - players.length)
     return (
-      <div className="bigtwo-state bigtwo-waiting">
-        <h3>{t.roomLabel}: {roomId}</h3>
+      <div className="bigtwo-state bigtwo-waiting ready-room-wrap">
+        {renderReadyRoomToolbar()}
+        <h3 className="ready-room-heading">{t.roomLabel}: {roomId}</h3>
         <p className="bigtwo-waiting-msg">{t.bigtwoWaiting.replace('{n}', needed)}</p>
-        <p className="bigtwo-waiting-count">{roomState.players?.length || 0} / 3</p>
+        <p className="ready-room-title">{t.readyRoomTitle}</p>
+        <ul className="ready-room-list ready-room-grid">
+          {players.map((p) => (
+            <li key={p.id} className={readyPlayers.includes(p.id) ? 'ready' : ''}>
+              <span className="ready-room-player">{p.emoji} {p.name}</span>
+              {readyPlayers.includes(p.id) ? <span className="ready-room-check" aria-hidden="true"> ✓</span> : null}
+            </li>
+          ))}
+        </ul>
+        {amReady ? (
+          <>
+            <p className="ready-waiting-msg">{t.readyWaitingOthers}</p>
+            <button type="button" className="bigtwo-btn bigtwo-btn-outline game-leaderboard-toggle" onClick={pressCancelReady}>{t.cancelReadyBtn}</button>
+          </>
+        ) : (
+          <button type="button" className="bigtwo-btn game-leaderboard-toggle" onClick={pressReadyForStart}>{t.readyBtn}</button>
+        )}
       </div>
     )
   }
@@ -268,6 +439,7 @@ export default function BigTwoGame() {
     const secs = countdownLeft !== null ? countdownLeft : COUNTDOWN_SECONDS
     return (
       <div className="bigtwo-state bigtwo-countdown">
+        {renderToolbar(roomState.players || [])}
         <h3>{t.bigtwoGameStarting}</h3>
         <p className="bigtwo-countdown-num">{secs}</p>
       </div>
@@ -284,6 +456,7 @@ export default function BigTwoGame() {
 
     return (
       <div className="bigtwo-state bigtwo-result">
+        {renderToolbar(roundPlayers)}
         <h3 className="bigtwo-result-title">
           {roomState.winner === playerId ? t.bigtwoYouWin : winner ? t.bigtwoWins.replace('{name}', `${winner.emoji} ${winner.name}`) : t.gameOver}
         </h3>
@@ -312,7 +485,8 @@ export default function BigTwoGame() {
 
     return (
       <div className="bigtwo-play-wrap">
-        <div className="bigtwo-rules-area">
+        {renderToolbar(roundPlayers)}
+        <div className="bigtwo-rules-area bigtwo-top-bar">
           <button
             type="button"
             className="bigtwo-rules-toggle"
@@ -419,22 +593,23 @@ export default function BigTwoGame() {
             {t.bigtwoCardHistory} {historyOpen ? '▼' : '▶'}
           </button>
           {historyOpen && (
-            <div className="bigtwo-history-panel">
+            <div className="bigtwo-history-panel bigtwo-history-toss-style">
+              <p className="bigtwo-history-panel-title">{t.bigtwoCardHistory}</p>
               {((roomState.playedCardsHistory) || []).length === 0 ? (
                 <p className="bigtwo-history-empty">{t.bigtwoNoPlaysYet}</p>
               ) : (
-                <ul className="bigtwo-history-list">
+                <div className="bigtwo-history-list">
                   {[...(roomState.playedCardsHistory || [])].reverse().map((entry, i) => (
-                    <li key={i} className="bigtwo-history-entry">
-                      <span className="bigtwo-history-player">{entry.emoji} {entry.playerName}</span>
+                    <div key={i} className="bigtwo-history-entry">
+                      <span className="bigtwo-history-player">{entry.emoji} {entry.playerName}:</span>
                       <div className="bigtwo-history-cards">
                         {(entry.cards || []).map((c) => (
                           <CardFace key={c.id} card={c} lang={lang} className="bigtwo-history-card" />
                         ))}
                       </div>
-                    </li>
+                    </div>
                   ))}
-                </ul>
+                </div>
               )}
             </div>
           )}

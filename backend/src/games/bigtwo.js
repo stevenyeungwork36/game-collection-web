@@ -126,6 +126,7 @@ export function joinRoom(roomId, playerName) {
       currentRoundPlayers: null,
       state: 'waiting',
       countdownEndTime: null,
+      readyPlayers: [],
       deck: [],
       hands: {},
       currentPlayerIndex: 0,
@@ -134,6 +135,7 @@ export function joinRoom(roomId, playerName) {
       passCount: 0,
       winner: null,
       playedCardsHistory: [],
+      winnerCounts: {},
       lastActivityAt: Date.now(),
     }
     rooms.set(roomId, room)
@@ -175,9 +177,14 @@ export function getRoomState(roomId, playerId) {
   if (!room) return null
   touchRoom(room)
 
-  if (room.state === 'waiting' && room.players.length >= MIN_PLAYERS) {
-    room.state = 'countdown'
-    room.countdownEndTime = Date.now() + COUNTDOWN_SECONDS * 1000
+  if (room.state === 'waiting') {
+    room.readyPlayers = room.readyPlayers || []
+    const allReady = room.readyPlayers.length === room.players.length && room.players.length >= MIN_PLAYERS
+    if (allReady) {
+      room.state = 'countdown'
+      room.countdownEndTime = Date.now() + COUNTDOWN_SECONDS * 1000
+      room.readyPlayers = []
+    }
   }
 
   if (room.state === 'countdown' && Date.now() >= room.countdownEndTime) {
@@ -190,6 +197,7 @@ export function getRoomState(roomId, playerId) {
     state: room.state,
     players: room.players.map((p) => ({ id: p.id, name: p.name, emoji: p.emoji })),
     playersNeeded: room.state === 'waiting' ? MIN_PLAYERS - room.players.length : 0,
+    readyPlayers: room.state === 'waiting' ? (room.readyPlayers || []) : [],
   }
 
   if (room.state === 'countdown') {
@@ -206,12 +214,14 @@ export function getRoomState(roomId, playerId) {
     base.tablePlayerId = room.tablePlayerId
     base.tableComboType = room.tableComboType || null
     base.winner = room.winner
+    base.winnerCounts = room.winnerCounts || {}
     const hist = room.playedCardsHistory || []
     base.playedCardsHistory = hist.slice(-PLAYED_HISTORY_MAX)
   }
 
   if (room.state === 'result') {
     base.readyPlayers = room.readyPlayers || []
+    base.winnerCounts = room.winnerCounts || {}
   }
 
   return base
@@ -293,12 +303,14 @@ export function playCards(roomId, playerId, cardIds) {
   room.tableComboType = combo
   room.passCount = 0
   room.lastPlayedPlayerIndex = room.currentPlayerIndex
+  pushPlayedToHistory(room)
 
   if (hand.length === 0) {
-    pushPlayedToHistory(room)
     room.winner = playerId
     room.state = 'result'
     room.readyPlayers = []
+    room.winnerCounts = room.winnerCounts || {}
+    room.winnerCounts[playerId] = (room.winnerCounts[playerId] || 0) + 1
     return { success: true, won: true }
   }
 
@@ -321,7 +333,6 @@ export function pass(roomId, playerId) {
 
   const roundLen = round.length
   if (room.passCount >= roundLen - 1) {
-    pushPlayedToHistory(room)
     room.table = null
     room.tablePlayerId = null
     room.tableComboType = null
@@ -331,6 +342,28 @@ export function pass(roomId, playerId) {
     }
   }
   return { success: true }
+}
+
+export function setReady(roomId, playerId) {
+  const room = rooms.get(roomId)
+  if (!room) return { success: false, error: 'Room not found' }
+  if (room.state !== 'waiting') return { success: false, error: 'Not in waiting' }
+  if (!room.players.some((p) => p.id === playerId)) return { success: false, error: 'Not in room' }
+  touchRoom(room)
+  room.readyPlayers = room.readyPlayers || []
+  if (!room.readyPlayers.includes(playerId)) room.readyPlayers.push(playerId)
+  return { success: true, readyPlayers: room.readyPlayers }
+}
+
+export function cancelReady(roomId, playerId) {
+  const room = rooms.get(roomId)
+  if (!room) return { success: false, error: 'Room not found' }
+  if (room.state !== 'waiting') return { success: false, error: 'Not in waiting' }
+  if (!room.players.some((p) => p.id === playerId)) return { success: false, error: 'Not in room' }
+  touchRoom(room)
+  room.readyPlayers = room.readyPlayers || []
+  room.readyPlayers = room.readyPlayers.filter((id) => id !== playerId)
+  return { success: true, readyPlayers: room.readyPlayers }
 }
 
 export function ready(roomId, playerId) {
@@ -354,4 +387,41 @@ export function ready(roomId, playerId) {
   room.hands = {}
   room.winner = null
   return { success: true, state: 'countdown', countdownEndTime: room.countdownEndTime }
+}
+
+export function listRooms() {
+  cleanupInactiveRooms()
+  return [...rooms.entries()].map(([roomId, r]) => ({
+    roomId,
+    playerCount: r.players?.length ?? 0,
+    state: r.state ?? 'waiting',
+    minPlayers: MIN_PLAYERS,
+    hasPassword: false,
+  }))
+}
+
+export function leaveRoom(roomId, playerId) {
+  const room = rooms.get(roomId)
+  if (!room) return { success: false, error: 'Room not found' }
+  room.players = (room.players || []).filter((p) => p.id !== playerId)
+  if (room.players.length === 0) {
+    rooms.delete(roomId)
+    return { success: true }
+  }
+  // Someone left: reset room to waiting so everyone else returns to ready/lobby
+  if (room.state !== 'waiting') {
+    room.state = 'waiting'
+    room.currentRoundPlayers = null
+    room.countdownEndTime = null
+    room.deck = []
+    room.hands = {}
+    room.currentPlayerIndex = 0
+    room.table = null
+    room.tablePlayerId = null
+    room.passCount = 0
+    room.winner = null
+    room.playedCardsHistory = []
+    room.readyPlayers = []
+  }
+  return { success: true }
 }
