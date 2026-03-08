@@ -24,6 +24,7 @@ function AppContent() {
         ariaLabel={drawerOpen ? t.closeMenu : t.openMenu}
         stuckToDrawer={drawerOpen}
         drawerWidth={DRAWER_WIDTH}
+        isOpen={drawerOpen}
       />
       <main
         className="app-main"

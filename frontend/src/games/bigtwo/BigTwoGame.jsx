@@ -21,6 +21,7 @@ export default function BigTwoGame() {
   const [roomState, setRoomState] = useState(null)
   const [countdownLeft, setCountdownLeft] = useState(null)
   const [rulesOpen, setRulesOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [playError, setPlayError] = useState('')
   const [hasPressedReady, setHasPressedReady] = useState(false)
@@ -96,6 +97,18 @@ export default function BigTwoGame() {
   useEffect(() => {
     if (roomState?.state === 'countdown' || roomState?.state === 'playing') setHasPressedReady(false)
   }, [roomState?.state])
+
+  // Clear selection when it's not our turn; keep only ids that still exist in hand (fixes stale/unselect bugs)
+  useEffect(() => {
+    if (roomState?.state !== 'playing') return
+    const myHand = roomState.myHand || []
+    const handIds = new Set(myHand.map((c) => c.id))
+    const isMyTurn = roomState.currentPlayerId === playerId
+    setSelectedIds((prev) => {
+      if (!isMyTurn) return new Set()
+      return new Set([...prev].filter((id) => handIds.has(id)))
+    })
+  }, [roomState?.state, roomState?.currentPlayerId, roomState?.myHand, playerId])
 
   useEffect(() => {
     if (flyState.cards.length > 0 && flyState.from && flyState.to) {
@@ -184,12 +197,17 @@ export default function BigTwoGame() {
   }, [playerId, roomId])
 
   const toggleCard = (id) => {
+    if (id == null) return
     setSelectedIds((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
       else next.add(id)
       return next
     })
+  }
+
+  const deselectAll = () => {
+    setSelectedIds(new Set())
   }
 
   const rules = lang === 'zh' ? RULES_ZH : RULES_EN
@@ -339,7 +357,7 @@ export default function BigTwoGame() {
 
         <div className="bigtwo-opponents">
           {roundPlayers.filter((p) => p.id !== playerId).map((p) => (
-            <div key={p.id} className={`bigtwo-opponent ${roomState.currentPlayerId === p.id ? 'current' : ''}`}>
+            <div key={p.id} className={`bigtwo-opponent ${roomState.currentPlayerId === p.id ? 'current bigtwo-opponent-active' : ''}`}>
               <span className="bigtwo-opponent-name">{p.emoji} {p.name}</span>
               <span className="bigtwo-opponent-count">{(roomState.handCounts || {})[p.id] ?? 0}</span>
             </div>
@@ -380,7 +398,8 @@ export default function BigTwoGame() {
           </div>
         )}
 
-        <div className="bigtwo-turn-bar">
+        <div className={`bigtwo-turn-bar ${isMyTurn ? 'bigtwo-turn-bar-you' : ''}`}>
+          <span className="bigtwo-turn-label">{t.bigtwoCurrentPlayer}:</span>
           {isMyTurn ? (
             <span className="bigtwo-turn-msg">{t.bigtwoYourTurn}</span>
           ) : (
@@ -390,7 +409,38 @@ export default function BigTwoGame() {
 
         {playError && <p className="bigtwo-error">{playError}</p>}
 
-        <div className="bigtwo-hand">
+        <div className="bigtwo-history-area">
+          <button
+            type="button"
+            className="bigtwo-history-toggle"
+            onClick={() => setHistoryOpen((o) => !o)}
+            aria-expanded={historyOpen}
+          >
+            {t.bigtwoCardHistory} {historyOpen ? '▼' : '▶'}
+          </button>
+          {historyOpen && (
+            <div className="bigtwo-history-panel">
+              {((roomState.playedCardsHistory) || []).length === 0 ? (
+                <p className="bigtwo-history-empty">{t.bigtwoNoPlaysYet}</p>
+              ) : (
+                <ul className="bigtwo-history-list">
+                  {[...(roomState.playedCardsHistory || [])].reverse().map((entry, i) => (
+                    <li key={i} className="bigtwo-history-entry">
+                      <span className="bigtwo-history-player">{entry.emoji} {entry.playerName}</span>
+                      <div className="bigtwo-history-cards">
+                        {(entry.cards || []).map((c) => (
+                          <CardFace key={c.id} card={c} lang={lang} className="bigtwo-history-card" />
+                        ))}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className={`bigtwo-hand ${isMyTurn ? 'bigtwo-hand-active' : ''}`}>
           <div className="bigtwo-hand-cards" ref={handRef}>
             {myHand.map((card) => (
               <CardFace
@@ -418,6 +468,14 @@ export default function BigTwoGame() {
                 </button>
                 <button type="button" className="bigtwo-btn bigtwo-btn-outline" onClick={submitPass}>
                   {t.bigtwoPass}
+                </button>
+                <button
+                  type="button"
+                  className="bigtwo-btn bigtwo-btn-outline"
+                  onClick={deselectAll}
+                  disabled={selectedIds.size === 0}
+                >
+                  {t.bigtwoDeselectAll}
                 </button>
               </>
             )}

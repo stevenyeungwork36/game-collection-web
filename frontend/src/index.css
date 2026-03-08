@@ -171,6 +171,20 @@ body {
   color: var(--accent);
 }
 
+.drawer-item-subdued {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  opacity: 0.85;
+}
+
+.drawer-item-subdued:hover {
+  opacity: 1;
+}
+
+.drawer-item-subdued .drawer-item-icon {
+  font-size: 1rem;
+}
+
 .drawer-item-icon {
   font-size: 1.25rem;
   width: 1.5rem;
@@ -344,6 +358,13 @@ body {
   transition: transform 0.2s;
 }
 
+.drawer-toggle-arrow {
+  display: block;
+  font-size: 1.25rem;
+  line-height: 1;
+  text-align: center;
+}
+
 
 /* -------------------------------------------------------------------------
    Page content
@@ -424,6 +445,31 @@ body {
   font-size: 0.9375rem;
   color: var(--text-muted);
   line-height: 1.5;
+}
+
+.game-card-subdued .card-body {
+  padding: 1rem 1.25rem;
+}
+
+.game-card-subdued .display-4 {
+  font-size: 2rem;
+}
+
+.game-card-subdued .card-title {
+  font-size: 0.9375rem;
+}
+
+.game-card-subdued .card-text {
+  font-size: 0.8125rem;
+}
+
+.game-card-subdued {
+  opacity: 0.88;
+  border-style: dashed;
+}
+
+.game-card-link:hover .game-card-subdued {
+  opacity: 1;
 }
 
 /* -------------------------------------------------------------------------
@@ -1649,9 +1695,27 @@ body {
   border: 1px solid var(--border);
   font-size: 0.875rem;
 }
-.bigtwo-opponent.current { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.bigtwo-opponent.current,
+.bigtwo-opponent-active {
+  border-color: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.35);
+}
 .bigtwo-opponent-name { margin-right: 0.5rem; }
 .bigtwo-opponent-count { color: var(--text-muted); font-size: 0.8125rem; }
+
+.bigtwo-turn-bar {
+  text-align: center;
+  font-weight: 500;
+  color: var(--accent);
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+.bigtwo-turn-bar-you {
+  background: rgba(34, 197, 94, 0.12);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.3);
+}
+.bigtwo-turn-label { margin-right: 0.5rem; font-weight: 600; color: var(--text); }
 
 .bigtwo-table {
   min-height: 80px;
@@ -1668,9 +1732,63 @@ body {
 .bigtwo-table-cards { display: flex; flex-wrap: wrap; gap: 0.35rem; }
 .bigtwo-table-empty { color: var(--text-muted); font-size: 0.875rem; }
 
-.bigtwo-turn-bar { text-align: center; font-weight: 500; color: var(--accent); }
+.bigtwo-history-area { margin: 0.75rem 0; }
+.bigtwo-history-toggle {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.875rem;
+  padding: 0.25rem 0;
+}
+.bigtwo-history-toggle:hover { text-decoration: underline; }
+.bigtwo-history-panel {
+  margin-top: 0.5rem;
+  padding: 0.75rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.bigtwo-history-list { list-style: none; padding: 0; margin: 0; }
+.bigtwo-history-entry {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.bigtwo-history-entry:last-child { border-bottom: none; }
+.bigtwo-history-player { font-size: 0.8125rem; margin-right: 0.5rem; }
+.bigtwo-history-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  margin-top: 0.35rem;
+}
+.bigtwo-history-panel .bigtwo-history-card {
+  width: 32px;
+  min-width: 32px;
+  min-height: 0;
+  aspect-ratio: 2.5 / 3.5;
+}
+.bigtwo-history-panel .bigtwo-history-card .bigtwo-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.bigtwo-history-panel .bigtwo-history-card .bigtwo-card-text { font-size: 0.5rem; }
+.bigtwo-history-empty { font-size: 0.875rem; color: var(--text-muted); margin: 0; }
 
-.bigtwo-hand { margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border); }
+.bigtwo-hand {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  border-radius: 12px;
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.bigtwo-hand-active {
+  border-color: rgba(34, 197, 94, 0.5);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+}
 .bigtwo-hand-cards {
   display: flex;
   flex-wrap: wrap;
@@ -1694,7 +1812,7 @@ body {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  transition: transform 0.15s ease, border-color 0.15s, box-shadow 0.15s;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   flex-shrink: 0;
 }
 
@@ -1735,11 +1853,20 @@ body {
     0 0 0 2px var(--accent-soft);
 }
 
+/* Selected state uses green so it’s clearly different from hover (accent) */
 .bigtwo-card-btn.selected {
-  border-color: var(--accent);
+  transform: translateY(-6px);
+  border-color: #22c55e;
   box-shadow:
-    0 4px 8px rgba(0, 0, 0, 0.2),
-    0 0 0 3px var(--accent-soft);
+    0 6px 14px rgba(0, 0, 0, 0.2),
+    0 0 0 3px rgba(34, 197, 94, 0.4);
+}
+
+.bigtwo-card-btn.selected:hover:not(:disabled) {
+  border-color: #16a34a;
+  box-shadow:
+    0 8px 16px rgba(0, 0, 0, 0.22),
+    0 0 0 3px rgba(34, 197, 94, 0.5);
 }
 
 .bigtwo-card-btn:disabled { cursor: default; }

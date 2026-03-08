@@ -16,9 +16,9 @@ export default function HomePage() {
       <p className="page-subtitle">{t.homeSubtitle}</p>
       <div className="row g-4">
         {gameRegistry.map((game) => (
-          <div key={game.id} className="col-12 col-sm-6 col-lg-4">
+          <div key={game.id} className={`col-12 col-sm-6 col-lg-4 ${game.subdued ? 'game-card-col-subdued' : ''}`}>
             <Link to={game.path} className="game-card-link text-decoration-none">
-              <div className="game-card card h-100">
+              <div className={`game-card card h-100 ${game.subdued ? 'game-card-subdued' : ''}`}>
                 <div className="card-body d-flex flex-column">
                   <div className="display-4 mb-3" aria-hidden="true">
                     {game.icon}

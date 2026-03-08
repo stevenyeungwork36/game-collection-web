@@ -133,6 +133,7 @@ export function joinRoom(roomId, playerName) {
       tablePlayerId: null,
       passCount: 0,
       winner: null,
+      playedCardsHistory: [],
       lastActivityAt: Date.now(),
     }
     rooms.set(roomId, room)
@@ -205,6 +206,8 @@ export function getRoomState(roomId, playerId) {
     base.tablePlayerId = room.tablePlayerId
     base.tableComboType = room.tableComboType || null
     base.winner = room.winner
+    const hist = room.playedCardsHistory || []
+    base.playedCardsHistory = hist.slice(-PLAYED_HISTORY_MAX)
   }
 
   if (room.state === 'result') {
@@ -234,8 +237,27 @@ function startNewRound(room) {
   room.tableComboType = null
   room.passCount = 0
   room.winner = null
+  room.playedCardsHistory = []
   room.currentPlayerIndex = findPlayerWithThreeD(room.hands, playerIds)
   room.state = 'playing'
+}
+
+const PLAYED_HISTORY_MAX = 5
+
+function pushPlayedToHistory(room) {
+  if (!room.table || room.table.length === 0) return
+  const round = room.currentRoundPlayers || []
+  const player = round.find((p) => p.id === room.tablePlayerId)
+  room.playedCardsHistory = room.playedCardsHistory || []
+  room.playedCardsHistory.push({
+    playerId: room.tablePlayerId,
+    playerName: player?.name || '?',
+    emoji: player?.emoji || '',
+    cards: [...room.table],
+  })
+  if (room.playedCardsHistory.length > PLAYED_HISTORY_MAX) {
+    room.playedCardsHistory = room.playedCardsHistory.slice(-PLAYED_HISTORY_MAX)
+  }
 }
 
 export function playCards(roomId, playerId, cardIds) {
@@ -273,6 +295,7 @@ export function playCards(roomId, playerId, cardIds) {
   room.lastPlayedPlayerIndex = room.currentPlayerIndex
 
   if (hand.length === 0) {
+    pushPlayedToHistory(room)
     room.winner = playerId
     room.state = 'result'
     room.readyPlayers = []
@@ -298,6 +321,7 @@ export function pass(roomId, playerId) {
 
   const roundLen = round.length
   if (room.passCount >= roundLen - 1) {
+    pushPlayedToHistory(room)
     room.table = null
     room.tablePlayerId = null
     room.tableComboType = null

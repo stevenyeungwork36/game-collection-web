@@ -163,6 +163,11 @@ export function getRoomState(roomId, playerId) {
   if (!room) return null
   touchRoom(room)
 
+  if (room.state === 'waiting' && room.players.length >= MIN_PLAYERS) {
+    room.state = 'countdown'
+    room.countdownEndTime = Date.now() + COUNTDOWN_SECONDS * 1000
+  }
+
   if (room.state === 'countdown' && Date.now() >= room.countdownEndTime) {
     room.currentRoundPlayers = [...room.players]
     if (!startNewRound(room)) room.state = 'waiting'

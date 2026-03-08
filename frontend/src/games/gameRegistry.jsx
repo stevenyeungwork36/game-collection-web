@@ -21,22 +21,6 @@ function GameFallback() {
 
 export const gameRegistry = [
   {
-    id: 'test',
-    title: 'Connection Test',
-    titleZh: '連線測試',
-    description: 'One-person test: check that the backend is reachable.',
-    descriptionZh: '單人測試：確認後端是否可連線。',
-    path: '/games/test',
-    icon: '🔌',
-    Component: function TestRoute() {
-      return (
-        <Suspense fallback={<GameFallback />}>
-          <TestGame />
-        </Suspense>
-      )
-    },
-  },
-  {
     id: 'imposter',
     title: 'Imposter',
     titleZh: '臥底',
@@ -80,6 +64,23 @@ export const gameRegistry = [
       return (
         <Suspense fallback={<GameFallback />}>
           <BigTwoGame />
+        </Suspense>
+      )
+    },
+  },
+  {
+    id: 'test',
+    title: 'Connection Test',
+    titleZh: '連線測試',
+    description: 'One-person test: check that the backend is reachable.',
+    descriptionZh: '單人測試：確認後端是否可連線。',
+    path: '/games/test',
+    icon: '🔌',
+    subdued: true,
+    Component: function TestRoute() {
+      return (
+        <Suspense fallback={<GameFallback />}>
+          <TestGame />
         </Suspense>
       )
     },

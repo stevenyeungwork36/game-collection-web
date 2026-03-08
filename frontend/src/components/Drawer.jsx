@@ -44,7 +44,7 @@ export default function Drawer({ isOpen, onClose }) {
             <Link
               key={game.id}
               to={game.path}
-              className={`drawer-item ${location.pathname === game.path ? 'active' : ''}`}
+              className={`drawer-item ${location.pathname === game.path ? 'active' : ''} ${game.subdued ? 'drawer-item-subdued' : ''}`}
               onClick={onClose}
             >
               <span className="drawer-item-icon">{game.icon}</span>

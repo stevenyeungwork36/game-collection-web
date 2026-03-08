@@ -3,6 +3,7 @@ export default function DrawerToggle({
   ariaLabel = 'Open menu',
   stuckToDrawer = false,
   drawerWidth = 260,
+  isOpen = false,
 }) {
   return (
     <button
@@ -14,9 +15,9 @@ export default function DrawerToggle({
         left: stuckToDrawer ? `${drawerWidth}px` : '1rem',
       }}
     >
-      <span className="drawer-toggle-bar" />
-      <span className="drawer-toggle-bar" />
-      <span className="drawer-toggle-bar" />
+      <span className="drawer-toggle-arrow" aria-hidden="true">
+        {isOpen ? '←' : '→'}
+      </span>
     </button>
   )
 }
