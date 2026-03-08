@@ -79,7 +79,15 @@ Netlify will use it. Otherwise set manually:
 
 Click **Deploy site**. Wait for the build to finish. You’ll get a URL like `https://random-name-123.netlify.app`.
 
-**Note:** API calls from this URL will 404 until you deploy the backend and (if needed) point the frontend to it.
+**Note:** For the games to work when the frontend is on Netlify and the backend is on Render, set a Netlify **environment variable** so the frontend knows where the API is:
+
+1. In Netlify: **Site settings** → **Environment variables** → **Add a variable** (or **Edit variables**).
+2. Add:
+   - **Key:** `VITE_API_BASE_URL`
+   - **Value:** your Render backend URL, e.g. `https://game-collection-xxxx.onrender.com` (no trailing slash).
+3. **Redeploy** the site (e.g. **Deploys** → **Trigger deploy** → **Deploy site**) so the new value is baked into the build.
+
+The frontend uses this to call your Render backend; without it, API calls from the Netlify URL would 404.
 
 ---
 
@@ -111,10 +119,11 @@ Go to [dashboard.render.com](https://dashboard.render.com) and sign in (e.g. wit
 
 (If your repo has a **Blueprint** and you use **New → Blueprint**, Render can read `render.yaml` and fill these for you.)
 
-### 3.4 Environment (optional)
+### 3.4 Environment and health check (optional)
 
 - Add **NODE_ENV** = `production` if you want.
 - **PORT** is usually set by Render; your app already uses `process.env.PORT || 3001`.
+- **Health Check Path:** set to `/api/health` so Render can confirm the service is up. The backend responds with `{ "ok": true }`.
 
 ### 3.5 Deploy
 

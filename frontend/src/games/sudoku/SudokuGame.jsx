@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { apiUrl } from '../../api'
 
 // Sample puzzle: 0 = empty. Solution is valid full grid.
 const SAMPLE_PUZZLE = [
@@ -85,7 +86,7 @@ export default function SudokuGame() {
 
   const handleSave = useCallback(async () => {
     try {
-      const res = await fetch('/api/games/sudoku/save', {
+      const res = await fetch(apiUrl('/api/games/sudoku/save'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ grid, given }),
@@ -98,7 +99,7 @@ export default function SudokuGame() {
 
   const handleLoad = useCallback(async () => {
     try {
-      const res = await fetch('/api/games/sudoku/load')
+      const res = await fetch(apiUrl('/api/games/sudoku/load'))
       if (!res.ok) return
       const data = await res.json()
       setGrid(data.grid || grid)

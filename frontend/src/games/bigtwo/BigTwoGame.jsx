@@ -3,6 +3,7 @@ import { RULES_EN, RULES_ZH, RULES_SUIT_ORDER_CARDS, RULES_RANK_ORDER_CARDS, RUL
 import CardFace from './CardFace'
 import { useLanguage } from '../../context/LanguageContext'
 import { getTranslations } from '../../translations'
+import { apiUrl } from '../../api'
 
 const FLY_ANIMATION_MS = 500
 
@@ -37,7 +38,7 @@ export default function BigTwoGame() {
       return
     }
     try {
-      const res = await fetch('/api/games/bigtwo/join', {
+      const res = await fetch(apiUrl('/api/games/bigtwo/join'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ roomId: r, playerName: n }),
@@ -65,7 +66,7 @@ export default function BigTwoGame() {
     const tick = async () => {
       try {
         const res = await fetch(
-          `/api/games/bigtwo/rooms/${encodeURIComponent(roomId)}?playerId=${encodeURIComponent(playerId)}`
+          apiUrl(`/api/games/bigtwo/rooms/${encodeURIComponent(roomId)}?playerId=${encodeURIComponent(playerId)}`)
         )
         if (!res.ok) return
         const data = await res.json()
@@ -109,7 +110,7 @@ export default function BigTwoGame() {
     const myHand = roomState?.myHand || []
     const cardsToFly = myHand.filter((c) => selectedIds.has(c.id))
     try {
-      const res = await fetch(`/api/games/bigtwo/rooms/${encodeURIComponent(roomId)}/play`, {
+      const res = await fetch(apiUrl(`/api/games/bigtwo/rooms/${encodeURIComponent(roomId)}/play`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerId, cardIds: [...selectedIds] }),
@@ -130,7 +131,7 @@ export default function BigTwoGame() {
         setTimeout(() => {
           setFlyState((prev) => ({ ...prev, cards: [] }))
           setFlyPhase('start')
-          fetch(`/api/games/bigtwo/rooms/${encodeURIComponent(roomId)}?playerId=${encodeURIComponent(playerId)}`)
+          fetch(apiUrl(`/api/games/bigtwo/rooms/${encodeURIComponent(roomId)}?playerId=${encodeURIComponent(playerId)}`))
             .then((r) => r.ok ? r.json() : null)
             .then((data) => { if (data) setRoomState(data) })
         }, FLY_ANIMATION_MS)
@@ -138,7 +139,7 @@ export default function BigTwoGame() {
         setFlyState({ cards: cardsToFly, from: null, to: null })
         setTimeout(() => {
           setFlyState((prev) => ({ ...prev, cards: [] }))
-          fetch(`/api/games/bigtwo/rooms/${encodeURIComponent(roomId)}?playerId=${encodeURIComponent(playerId)}`)
+          fetch(apiUrl(`/api/games/bigtwo/rooms/${encodeURIComponent(roomId)}?playerId=${encodeURIComponent(playerId)}`))
             .then((r) => r.ok ? r.json() : null)
             .then((data) => { if (data) setRoomState(data) })
         }, FLY_ANIMATION_MS)
@@ -154,7 +155,7 @@ export default function BigTwoGame() {
     if (!playerId || !roomId) return
     setPlayError('')
     try {
-      const res = await fetch(`/api/games/bigtwo/rooms/${encodeURIComponent(roomId)}/pass`, {
+      const res = await fetch(apiUrl(`/api/games/bigtwo/rooms/${encodeURIComponent(roomId)}/pass`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerId }),
@@ -174,7 +175,7 @@ export default function BigTwoGame() {
     if (!playerId || !roomId) return
     setHasPressedReady(true)
     try {
-      await fetch(`/api/games/bigtwo/rooms/${encodeURIComponent(roomId)}/ready`, {
+      await fetch(apiUrl(`/api/games/bigtwo/rooms/${encodeURIComponent(roomId)}/ready`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerId }),

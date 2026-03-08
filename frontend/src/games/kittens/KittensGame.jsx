@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useLanguage } from '../../context/LanguageContext'
 import { getTranslations } from '../../translations'
+import { apiUrl } from '../../api'
 
 const POLL_INTERVAL_MS = 1500
 const COUNTDOWN_SECONDS = 5
@@ -43,7 +44,7 @@ export default function KittensGame() {
       return
     }
     try {
-      const res = await fetch('/api/games/kittens/join', {
+      const res = await fetch(apiUrl('/api/games/kittens/join'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ roomId: r, playerName: n }),
@@ -71,7 +72,7 @@ export default function KittensGame() {
     const tick = async () => {
       try {
         const res = await fetch(
-          `/api/games/kittens/rooms/${encodeURIComponent(roomId)}?playerId=${encodeURIComponent(playerId)}`
+          apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}?playerId=${encodeURIComponent(playerId)}`)
         )
         if (!res.ok) return
         const data = await res.json()
@@ -105,7 +106,7 @@ export default function KittensGame() {
   const pressReady = useCallback(async () => {
     if (!playerId || !roomId) return
     try {
-      const res = await fetch(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}/ready`, {
+      const res = await fetch(apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}/ready`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerId }),
@@ -118,7 +119,7 @@ export default function KittensGame() {
   const requestRestart = useCallback(async () => {
     if (!playerId || !roomId) return
     try {
-      await fetch(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}/restart`, {
+      await fetch(apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}/restart`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerId }),
@@ -130,7 +131,7 @@ export default function KittensGame() {
     if (!playerId || !roomId) return
     setPlayError('')
     try {
-      const res = await fetch(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}/draw`, {
+      const res = await fetch(apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}/draw`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerId }),
@@ -145,7 +146,7 @@ export default function KittensGame() {
         setTimeout(() => setShowIExploded(false), 2500)
       }
       const next = await fetch(
-        `/api/games/kittens/rooms/${encodeURIComponent(roomId)}?playerId=${encodeURIComponent(playerId)}`
+        apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}?playerId=${encodeURIComponent(playerId)}`)
       )
       if (next.ok) setRoomState(await next.json())
     } catch (e) {
@@ -159,7 +160,7 @@ export default function KittensGame() {
     setFavorTarget(null)
     setFoodPairCard(null)
     try {
-      const res = await fetch(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}/play`, {
+      const res = await fetch(apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}/play`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerId, cardId, ...options }),
@@ -171,7 +172,7 @@ export default function KittensGame() {
       }
       if (data.seenCards) setShowSeeFuture(data.seenCards)
       const next = await fetch(
-        `/api/games/kittens/rooms/${encodeURIComponent(roomId)}?playerId=${encodeURIComponent(playerId)}`
+        apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}?playerId=${encodeURIComponent(playerId)}`)
       )
       if (next.ok) setRoomState(await next.json())
     } catch (e) {
@@ -183,7 +184,7 @@ export default function KittensGame() {
     if (!playerId || !roomId) return
     setPlayError('')
     try {
-      const res = await fetch(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}/favor-give`, {
+      const res = await fetch(apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}/favor-give`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerId, cardId }),
@@ -194,7 +195,7 @@ export default function KittensGame() {
         return
       }
       const next = await fetch(
-        `/api/games/kittens/rooms/${encodeURIComponent(roomId)}?playerId=${encodeURIComponent(playerId)}`
+        apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}?playerId=${encodeURIComponent(playerId)}`)
       )
       if (next.ok) setRoomState(await next.json())
     } catch (e) {

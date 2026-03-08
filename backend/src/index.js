@@ -21,7 +21,7 @@ if (existsSync(frontendDist)) {
   app.use(express.static(frontendDist))
 }
 
-// Health check
+// Health check (for Render, load balancers, etc.). Path: GET /api/health
 app.get('/api/health', (req, res) => {
   res.json({ ok: true })
 })

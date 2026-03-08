@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useLanguage } from '../../context/LanguageContext'
 import { getTranslations } from '../../translations'
+import { apiUrl } from '../../api'
 
 const POLL_INTERVAL_MS = 1500
 const WORD_PHASE_SECONDS = 10
@@ -29,7 +30,7 @@ export default function ImposterGame() {
       return
     }
     try {
-      const res = await fetch('/api/games/imposter/join', {
+      const res = await fetch(apiUrl('/api/games/imposter/join'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ roomId: r, playerName: n }),
@@ -63,7 +64,7 @@ export default function ImposterGame() {
     const tick = async () => {
       try {
         const res = await fetch(
-          `/api/games/imposter/rooms/${encodeURIComponent(roomId)}?playerId=${encodeURIComponent(playerId)}`
+          apiUrl(`/api/games/imposter/rooms/${encodeURIComponent(roomId)}?playerId=${encodeURIComponent(playerId)}`)
         )
         if (!res.ok) return
         const data = await res.json()
@@ -114,7 +115,7 @@ export default function ImposterGame() {
   const submitVote = useCallback(async () => {
     if (!voteFor || !playerId || !roomId) return
     try {
-      const res = await fetch(`/api/games/imposter/rooms/${encodeURIComponent(roomId)}/vote`, {
+      const res = await fetch(apiUrl(`/api/games/imposter/rooms/${encodeURIComponent(roomId)}/vote`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerId, votedForPlayerId: voteFor }),
@@ -128,7 +129,7 @@ export default function ImposterGame() {
     if (!playerId || !roomId) return
     setHasPressedReady(true)
     try {
-      const res = await fetch(`/api/games/imposter/rooms/${encodeURIComponent(roomId)}/ready`, {
+      const res = await fetch(apiUrl(`/api/games/imposter/rooms/${encodeURIComponent(roomId)}/ready`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerId }),

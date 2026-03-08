@@ -35,6 +35,14 @@ npm run dev
 2. Register the game in `frontend/src/games/gameRegistry.js`.
 3. Optionally add backend routes and DB tables in `backend/` for saves/scores.
 
+## Environment variables
+
+Copy `.env.template` to `.env` and set values as needed. See `.env.template` for all supported variables (e.g. `PORT`, `NODE_ENV`, `VITE_API_BASE_URL` for frontend when deployed separately). Do not commit `.env`.
+
+## Health check
+
+The backend exposes **GET /api/health**, which returns `{ "ok": true }`. Use this path for Render (or similar) health checks.
+
 ## Tech stack
 
 - **Frontend:** React 18, Vite, React Router, Bootstrap 5  
