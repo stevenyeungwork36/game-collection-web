@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import { DECK_TEMPLATE, getCardInfo, isFoodType } from './kittens-cards.js'
 
 const PLAYER_EMOJIS = ['🐱', '🐶', '🐰', '🐻', '🐼', '🐨', '🦊', '🐯']
@@ -27,11 +28,15 @@ function generatePlayerId() {
   return `p${playerIdCounter++}`
 }
 
+function secureRandomInt(max) {
+  return crypto.randomInt(0, max)
+}
+
 function shuffle(arr) {
   const a = [...arr]
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]]
+    const j = secureRandomInt(i + 1)
+    ;[a[i], a[j]] = [a[j], a[i]]
   }
   return a
 }
@@ -364,7 +369,7 @@ export function playCard(roomId, playerId, cardId, options = {}) {
       const nextId = round[nextIdx].id
       const nextHand = room.hands[nextId] || []
       if (nextHand.length > 0) {
-        const stolenIdx = Math.floor(Math.random() * nextHand.length)
+        const stolenIdx = secureRandomInt(nextHand.length)
         const stolen = nextHand.splice(stolenIdx, 1)[0]
         room.hands[playerId].push(stolen)
       }
@@ -417,7 +422,7 @@ export function drawCard(roomId, playerId) {
       return { success: true, drewExploding: true, defused: false }
     }
     hand.splice(defuseIdx, 1)
-    const pos = Math.floor(Math.random() * (room.deck.length + 1))
+    const pos = secureRandomInt(room.deck.length + 1)
     room.deck.splice(pos, 0, drawn)
     room.lastAction = { type: 'defuse', playerId }
     if (room.drawsRemaining === 0) {

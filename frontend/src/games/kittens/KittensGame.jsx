@@ -308,53 +308,36 @@ export default function KittensGame() {
           </div>
         )}
 
-        <div className="kittens-rules-area">
-          <button
-            type="button"
-            className="kittens-rules-toggle"
-            onClick={() => setRulesOpen((o) => !o)}
-            aria-expanded={rulesOpen}
-          >
-            {t.bigtwoRules} {rulesOpen ? '▼' : '▶'}
-          </button>
-          {rulesOpen && (
-            <div className="kittens-rules-panel">
-              <p>{lang === 'zh' ? '出牌或抽牌。抽到爆炸貓且無拆彈即出局。' : 'Play or draw. Draw Exploding Kitten without Defuse to lose.'}</p>
-            </div>
-          )}
-        </div>
-
-        <div className="kittens-new-game-btn-wrap">
-          <button
-            type="button"
-            className="kittens-new-game-btn"
-            onClick={requestRestart}
-            disabled={requestedCount >= totalInRound}
-            title={t.kittensNewGame}
-          >
-            <span className="kittens-new-game-emoji">🔄</span>
-            <span className="kittens-new-game-label">{t.kittensNewGame}</span>
-            {requestedCount > 0 && (
-              <span className="kittens-new-game-requested">{t.kittensNewGameRequested.replace('{n}', requestedCount).replace('{total}', totalInRound)}</span>
+        <div className="kittens-top-bar">
+          <div className="kittens-rules-area">
+            <button
+              type="button"
+              className="kittens-rules-toggle"
+              onClick={() => setRulesOpen((o) => !o)}
+              aria-expanded={rulesOpen}
+            >
+              {t.bigtwoRules} {rulesOpen ? '▼' : '▶'}
+            </button>
+            {rulesOpen && (
+              <div className="kittens-rules-panel">
+                <p>{lang === 'zh' ? '出牌或抽牌。抽到爆炸貓且無拆彈即出局。' : 'Play or draw. Draw Exploding Kitten without Defuse to lose.'}</p>
+              </div>
             )}
-          </button>
-        </div>
-
-        <div className="kittens-toss-region">
-          <p className="kittens-toss-title">{t.kittensTossTitle}</p>
-          <div className="kittens-toss-list">
-            {(roomState.playedCardsHistory || []).length === 0 ? (
-              <p className="kittens-toss-empty">{t.kittensTossEmpty}</p>
-            ) : (
-              (roomState.playedCardsHistory || []).map((entry, i) => (
-                <div key={i} className="kittens-toss-entry">
-                  <span className="kittens-toss-player">{entry.emoji} {entry.playerName}</span>
-                  <div className="kittens-toss-card">
-                    <span>{entry.cardEmoji || '🂠'}</span>
-                  </div>
-                </div>
-              ))
-            )}
+          </div>
+          <div className="kittens-new-game-btn-wrap">
+            <button
+              type="button"
+              className="kittens-new-game-btn"
+              onClick={requestRestart}
+              disabled={requestedCount >= totalInRound}
+              title={t.kittensNewGame}
+            >
+              <span className="kittens-new-game-emoji">🔄</span>
+              <span className="kittens-new-game-label">{t.kittensNewGame}</span>
+              {requestedCount > 0 && (
+                <span className="kittens-new-game-requested">{t.kittensNewGameRequested.replace('{n}', requestedCount).replace('{total}', totalInRound)}</span>
+              )}
+            </button>
           </div>
         </div>
 
@@ -369,6 +352,37 @@ export default function KittensGame() {
               <span className="kittens-opponent-count">{(roomState.handCounts || {})[p.id] ?? 0}</span>
             </div>
           ))}
+        </div>
+
+        <div className="kittens-play-area">
+          <div className="kittens-draw-pile">
+            <div className="kittens-draw-pile-card">🂠</div>
+            {canDraw && (
+              <button type="button" className="kittens-draw-btn kittens-draw-btn-center" onClick={drawCard}>
+                {t.kittensDrawBtn}
+              </button>
+            )}
+            {!canDraw && (
+              <span className="kittens-draw-pile-label">{t.kittensDrawBtn}</span>
+            )}
+          </div>
+          <div className="kittens-toss-region">
+            <p className="kittens-toss-title">{t.kittensTossTitle}</p>
+            <div className="kittens-toss-list">
+              {(roomState.playedCardsHistory || []).length === 0 ? (
+                <p className="kittens-toss-empty">{t.kittensTossEmpty}</p>
+              ) : (
+                (roomState.playedCardsHistory || []).map((entry, i) => (
+                  <div key={i} className="kittens-toss-entry">
+                    <span className="kittens-toss-player">{entry.emoji} {entry.playerName}</span>
+                    <div className="kittens-toss-card">
+                      <span>{entry.cardEmoji || '🂠'}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
 
         {pendingFavorWaiting && (
@@ -456,13 +470,6 @@ export default function KittensGame() {
                 </div>
               )
             })}
-          </div>
-          <div className="kittens-draw-area">
-            {canDraw && (
-              <button type="button" className="kittens-draw-btn" onClick={drawCard}>
-                {t.kittensDrawBtn}
-              </button>
-            )}
           </div>
         </div>
       </div>

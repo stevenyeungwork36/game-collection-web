@@ -1,6 +1,7 @@
 import { readFileSync, existsSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import crypto from 'crypto'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const WORDS_PATH = join(__dirname, '../../data/imposter-words.json')
@@ -42,7 +43,9 @@ function generatePlayerId() {
 }
 
 function pickRandom(arr) {
-  return arr[Math.floor(Math.random() * arr.length)]
+  if (!arr || arr.length === 0) return undefined
+  const i = crypto.randomInt(0, arr.length)
+  return arr[i]
 }
 
 function startNewRound(room, words) {
