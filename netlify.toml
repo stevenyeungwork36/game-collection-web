@@ -6,7 +6,8 @@
 # If you only want frontend on Netlify and backend elsewhere, use the config below and point the frontend to your backend URL.
 
 [build]
-  command = "npm run build:frontend"
+  # Install deps first (root + frontend); otherwise "vite: not found" because frontend/node_modules is missing
+  command = "npm run install:all && npm run build:frontend"
   publish = "frontend/dist"
 
 # SPA: serve index.html for all routes so React Router works when users open /games/bigtwo etc. directly
