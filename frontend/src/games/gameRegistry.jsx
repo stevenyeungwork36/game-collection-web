@@ -5,6 +5,7 @@ import { getTranslations } from '../translations'
 const ImposterGame = lazy(() => import('./imposter'))
 const KittensGame = lazy(() => import('./kittens'))
 const BigTwoGame = lazy(() => import('./bigtwo'))
+const TexasGame = lazy(() => import('./texas'))
 const TestGame = lazy(() => import('./test'))
 
 function GameFallback() {
@@ -64,6 +65,22 @@ export const gameRegistry = [
       return (
         <Suspense fallback={<GameFallback />}>
           <BigTwoGame />
+        </Suspense>
+      )
+    },
+  },
+  {
+    id: 'texas',
+    title: 'Texas Hold\'em',
+    titleZh: '德州撲克',
+    description: 'Classic poker. Table in the center, 1000 chips each. Add bots to play with 1+ players.',
+    descriptionZh: '經典德州撲克。中央牌桌，每人 1000 籌碼。可加機器人，1 人即可開局。',
+    path: '/games/texas',
+    icon: '♠️',
+    Component: function TexasRoute() {
+      return (
+        <Suspense fallback={<GameFallback />}>
+          <TexasGame />
         </Suspense>
       )
     },

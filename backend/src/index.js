@@ -7,6 +7,7 @@ import { getDb } from './db/db.js'
 import * as imposter from './games/imposter.js'
 import * as kittens from './games/kittens.js'
 import * as bigtwo from './games/bigtwo.js'
+import * as texas from './games/texas.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -451,6 +452,172 @@ app.post('/api/games/bigtwo/rooms/:roomId/cancel-ready', (req, res) => {
   } catch (err) {
     console.error('[ERROR]', err)
     res.status(500).json({ error: 'Cancel ready failed' })
+  }
+})
+
+// Texas Hold'em game
+app.post('/api/games/texas/join', (req, res) => {
+  try {
+    const { roomId, playerName } = req.body || {}
+    if (!roomId || !playerName || String(playerName).trim() === '') {
+      return res.status(400).json({ error: 'roomId and playerName required' })
+    }
+    const result = texas.joinRoom(String(roomId).trim(), String(playerName).trim())
+    if (!result.success) return res.status(400).json({ error: result.error })
+    res.json(result)
+  } catch (err) {
+    console.error('[ERROR] POST /api/games/texas/join', err)
+    res.status(500).json({ error: 'Join failed' })
+  }
+})
+
+app.get('/api/games/texas/rooms', (req, res) => {
+  try {
+    const list = texas.listRooms()
+    res.json(list)
+  } catch (err) {
+    console.error('[ERROR] GET /api/games/texas/rooms', err)
+    res.status(500).json({ error: 'Failed to list rooms' })
+  }
+})
+
+app.post('/api/games/texas/rooms/:roomId/leave', (req, res) => {
+  try {
+    const { roomId } = req.params
+    const { playerId } = req.body || {}
+    if (!playerId) return res.status(400).json({ error: 'playerId required' })
+    const result = texas.leaveRoom(roomId, playerId)
+    if (!result.success) return res.status(400).json({ error: result.error })
+    res.json(result)
+  } catch (err) {
+    console.error('[ERROR] POST /api/games/texas/rooms/:roomId/leave', err)
+    res.status(500).json({ error: 'Leave failed' })
+  }
+})
+
+app.get('/api/games/texas/rooms/:roomId', (req, res) => {
+  try {
+    const { roomId } = req.params
+    const playerId = req.query.playerId
+    if (!playerId) return res.status(400).json({ error: 'playerId query required' })
+    const state = texas.getRoomState(roomId, playerId)
+    if (!state) return res.status(404).json({ error: 'Room not found' })
+    res.json(state)
+  } catch (err) {
+    console.error('[ERROR] GET /api/games/texas/rooms/:roomId', err)
+    res.status(500).json({ error: 'Failed to get room' })
+  }
+})
+
+app.post('/api/games/texas/rooms/:roomId/add-bot', (req, res) => {
+  try {
+    const { roomId } = req.params
+    const { playerId } = req.body || {}
+    if (!playerId) return res.status(400).json({ error: 'playerId required' })
+    const result = texas.addBot(roomId, playerId)
+    if (!result.success) return res.status(400).json({ error: result.error })
+    res.json(result)
+  } catch (err) {
+    console.error('[ERROR] POST /api/games/texas/rooms/:roomId/add-bot', err)
+    res.status(500).json({ error: 'Add bot failed' })
+  }
+})
+
+app.post('/api/games/texas/rooms/:roomId/remove-bot', (req, res) => {
+  try {
+    const { roomId } = req.params
+    const { playerId, botId } = req.body || {}
+    if (!playerId || !botId) return res.status(400).json({ error: 'playerId and botId required' })
+    const result = texas.removeBot(roomId, playerId, botId)
+    if (!result.success) return res.status(400).json({ error: result.error })
+    res.json(result)
+  } catch (err) {
+    console.error('[ERROR] POST /api/games/texas/rooms/:roomId/remove-bot', err)
+    res.status(500).json({ error: 'Remove bot failed' })
+  }
+})
+
+app.post('/api/games/texas/rooms/:roomId/start', (req, res) => {
+  try {
+    const { roomId } = req.params
+    const { playerId } = req.body || {}
+    if (!playerId) return res.status(400).json({ error: 'playerId required' })
+    const result = texas.startGame(roomId, playerId)
+    if (!result.success) return res.status(400).json({ error: result.error })
+    res.json(result)
+  } catch (err) {
+    console.error('[ERROR] POST /api/games/texas/rooms/:roomId/start', err)
+    res.status(500).json({ error: 'Start failed' })
+  }
+})
+
+app.post('/api/games/texas/rooms/:roomId/fold', (req, res) => {
+  try {
+    const { roomId } = req.params
+    const { playerId } = req.body || {}
+    if (!playerId) return res.status(400).json({ error: 'playerId required' })
+    const result = texas.fold(roomId, playerId)
+    if (!result.success) return res.status(400).json({ error: result.error })
+    res.json(result)
+  } catch (err) {
+    console.error('[ERROR] POST /api/games/texas/rooms/:roomId/fold', err)
+    res.status(500).json({ error: 'Fold failed' })
+  }
+})
+
+app.post('/api/games/texas/rooms/:roomId/check', (req, res) => {
+  try {
+    const { roomId } = req.params
+    const { playerId } = req.body || {}
+    if (!playerId) return res.status(400).json({ error: 'playerId required' })
+    const result = texas.check(roomId, playerId)
+    if (!result.success) return res.status(400).json({ error: result.error })
+    res.json(result)
+  } catch (err) {
+    console.error('[ERROR] POST /api/games/texas/rooms/:roomId/check', err)
+    res.status(500).json({ error: 'Check failed' })
+  }
+})
+
+app.post('/api/games/texas/rooms/:roomId/call', (req, res) => {
+  try {
+    const { roomId } = req.params
+    const { playerId } = req.body || {}
+    if (!playerId) return res.status(400).json({ error: 'playerId required' })
+    const result = texas.call(roomId, playerId)
+    if (!result.success) return res.status(400).json({ error: result.error })
+    res.json(result)
+  } catch (err) {
+    console.error('[ERROR] POST /api/games/texas/rooms/:roomId/call', err)
+    res.status(500).json({ error: 'Call failed' })
+  }
+})
+
+app.post('/api/games/texas/rooms/:roomId/raise', (req, res) => {
+  try {
+    const { roomId } = req.params
+    const { playerId, amount } = req.body || {}
+    if (!playerId || amount == null) return res.status(400).json({ error: 'playerId and amount required' })
+    const result = texas.raise(roomId, playerId, amount)
+    if (!result.success) return res.status(400).json({ error: result.error })
+    res.json(result)
+  } catch (err) {
+    console.error('[ERROR] POST /api/games/texas/rooms/:roomId/raise', err)
+    res.status(500).json({ error: 'Raise failed' })
+  }
+})
+
+app.post('/api/games/texas/rooms/:roomId/ready-next', (req, res) => {
+  try {
+    const { roomId } = req.params
+    const { playerId } = req.body || {}
+    if (!playerId) return res.status(400).json({ error: 'playerId required' })
+    const result = texas.readyNextRound(roomId, playerId)
+    if (!result.success) return res.status(400).json({ error: result.error })
+    res.json(result)
+  } catch (err) {
+    console.error('[ERROR] POST /api/games/texas/rooms/:roomId/ready-next', err)
+    res.status(500).json({ error: 'Ready failed' })
   }
 })
 
