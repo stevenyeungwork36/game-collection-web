@@ -14,3 +14,25 @@ export function apiUrl(path) {
 if (typeof window !== 'undefined') {
   window.__API_BASE__ = API_BASE
 }
+
+/**
+ * Safe fetch + JSON parse. Use for API calls so non-JSON error responses (e.g. 502 HTML) don't throw.
+ * Returns { ok, data, errorMessage }.
+ */
+export async function apiFetch(url, options = {}) {
+  let res
+  try {
+    res = await fetch(url, options)
+  } catch (e) {
+    return { ok: false, data: null, errorMessage: e.message || 'Network request failed' }
+  }
+  let data = null
+  try {
+    const text = await res.text()
+    if (text) data = JSON.parse(text)
+  } catch {
+    data = null
+  }
+  const errorMessage = (data && typeof data.error === 'string') ? data.error : (res.ok ? null : `HTTP ${res.status}`)
+  return { ok: res.ok, data, errorMessage }
+}

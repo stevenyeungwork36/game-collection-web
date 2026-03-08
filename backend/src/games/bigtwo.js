@@ -14,6 +14,20 @@ const PLAYER_EMOJIS = ['🐱', '🐶', '🐰', '🐻']
 const MIN_PLAYERS = 3
 const MAX_PLAYERS = 4
 const COUNTDOWN_SECONDS = 5
+const ROOM_IDLE_MS = 30 * 60 * 1000 // 30 min inactive -> delete room
+
+function touchRoom(room) {
+  room.lastActivityAt = Date.now()
+}
+
+function cleanupInactiveRooms() {
+  const now = Date.now()
+  for (const [id, room] of rooms.entries()) {
+    if ((now - (room.lastActivityAt || 0)) > ROOM_IDLE_MS) {
+      rooms.delete(id)
+    }
+  }
+}
 
 const rooms = new Map()
 let playerIdCounter = 1
@@ -119,9 +133,11 @@ export function joinRoom(roomId, playerName) {
       tablePlayerId: null,
       passCount: 0,
       winner: null,
+      lastActivityAt: Date.now(),
     }
     rooms.set(roomId, room)
   }
+  touchRoom(room)
 
   const name = (playerName || '').trim()
   if (!name) return { success: false, error: 'Name required' }
@@ -153,8 +169,10 @@ export function joinRoom(roomId, playerName) {
 }
 
 export function getRoomState(roomId, playerId) {
+  cleanupInactiveRooms()
   const room = rooms.get(roomId)
   if (!room) return null
+  touchRoom(room)
 
   if (room.state === 'waiting' && room.players.length >= MIN_PLAYERS) {
     room.state = 'countdown'
@@ -223,6 +241,7 @@ function startNewRound(room) {
 export function playCards(roomId, playerId, cardIds) {
   const room = rooms.get(roomId)
   if (!room || room.state !== 'playing') return { success: false, error: 'Not in play' }
+  touchRoom(room)
   const round = room.currentRoundPlayers || []
   const currentId = round[room.currentPlayerIndex]?.id
   if (currentId !== playerId) return { success: false, error: 'Not your turn' }
@@ -268,6 +287,7 @@ export function playCards(roomId, playerId, cardIds) {
 export function pass(roomId, playerId) {
   const room = rooms.get(roomId)
   if (!room || room.state !== 'playing') return { success: false, error: 'Not in play' }
+  touchRoom(room)
   const round = room.currentRoundPlayers || []
   const currentId = round[room.currentPlayerIndex]?.id
   if (currentId !== playerId) return { success: false, error: 'Not your turn' }
@@ -292,6 +312,7 @@ export function pass(roomId, playerId) {
 export function ready(roomId, playerId) {
   const room = rooms.get(roomId)
   if (!room) return { success: false, error: 'Room not found' }
+  touchRoom(room)
   if (room.state !== 'result') return { success: false, error: 'Not in result phase' }
   if (!room.currentRoundPlayers?.some((p) => p.id === playerId)) return { success: false, error: 'Not in round' }
   if (room.readyPlayers.includes(playerId)) return { success: true, state: 'result', readyPlayers: room.readyPlayers }

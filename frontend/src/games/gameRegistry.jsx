@@ -5,6 +5,7 @@ import { getTranslations } from '../translations'
 const ImposterGame = lazy(() => import('./imposter'))
 const KittensGame = lazy(() => import('./kittens'))
 const BigTwoGame = lazy(() => import('./bigtwo'))
+const TestGame = lazy(() => import('./test'))
 
 function GameFallback() {
   const { lang } = useLanguage()
@@ -19,6 +20,22 @@ function GameFallback() {
 }
 
 export const gameRegistry = [
+  {
+    id: 'test',
+    title: 'Connection Test',
+    titleZh: '連線測試',
+    description: 'One-person test: check that the backend is reachable.',
+    descriptionZh: '單人測試：確認後端是否可連線。',
+    path: '/games/test',
+    icon: '🔌',
+    Component: function TestRoute() {
+      return (
+        <Suspense fallback={<GameFallback />}>
+          <TestGame />
+        </Suspense>
+      )
+    },
+  },
   {
     id: 'imposter',
     title: 'Imposter',

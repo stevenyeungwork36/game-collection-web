@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useLanguage } from '../../context/LanguageContext'
 import { getTranslations } from '../../translations'
-import { apiUrl } from '../../api'
+import { apiUrl, apiFetch } from '../../api'
 
 const POLL_INTERVAL_MS = 1500
 const COUNTDOWN_SECONDS = 5
@@ -43,17 +43,16 @@ export default function KittensGame() {
       setJoinError(t.enterRoomAndName)
       return
     }
-    try {
-      const res = await fetch(apiUrl('/api/games/kittens/join'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomId: r, playerName: n }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setJoinError(data.error || t.joinFailed)
-        return
-      }
+    const { ok, data, errorMessage } = await apiFetch(apiUrl('/api/games/kittens/join'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomId: r, playerName: n }),
+    })
+    if (!ok) {
+      setJoinError(errorMessage || data?.error || t.joinFailed)
+      return
+    }
+    if (data) {
       setPlayerId(data.playerId)
       setRoomId(r)
       setRoomState({
@@ -62,22 +61,16 @@ export default function KittensGame() {
         playersNeeded: data.playersNeeded ?? 0,
       })
       setShowJoinDialog(false)
-    } catch (e) {
-      setJoinError(t.networkError)
     }
   }, [roomId, playerName, t.enterRoomAndName, t.joinFailed, t.networkError])
 
   useEffect(() => {
     if (!playerId || !roomId || showJoinDialog) return
     const tick = async () => {
-      try {
-        const res = await fetch(
-          apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}?playerId=${encodeURIComponent(playerId)}`)
-        )
-        if (!res.ok) return
-        const data = await res.json()
-        setRoomState(data)
-      } catch {}
+      const { ok, data } = await apiFetch(
+        apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}?playerId=${encodeURIComponent(playerId)}`)
+      )
+      if (ok && data && typeof data.state === 'string') setRoomState(data)
     }
     tick()
     const id = setInterval(tick, POLL_INTERVAL_MS)
@@ -105,53 +98,41 @@ export default function KittensGame() {
 
   const pressReady = useCallback(async () => {
     if (!playerId || !roomId) return
-    try {
-      const res = await fetch(apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}/ready`), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playerId }),
-      })
-      const data = await res.json()
-      if (res.ok) setHasPressedReady(true)
-    } catch {}
+    const { ok } = await apiFetch(apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}/ready`), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ playerId }),
+    })
+    if (ok) setHasPressedReady(true)
   }, [playerId, roomId])
 
   const requestRestart = useCallback(async () => {
     if (!playerId || !roomId) return
-    try {
-      await fetch(apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}/restart`), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playerId }),
-      })
-    } catch {}
+    await apiFetch(apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}/restart`), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ playerId }),
+    })
   }, [playerId, roomId])
 
   const drawCard = useCallback(async () => {
     if (!playerId || !roomId) return
     setPlayError('')
-    try {
-      const res = await fetch(apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}/draw`), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playerId }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setPlayError(data.error || t.networkError)
-        return
-      }
-      if (data.drewExploding && !data.defused) {
-        setShowIExploded(true)
-        setTimeout(() => setShowIExploded(false), 2500)
-      }
-      const next = await fetch(
-        apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}?playerId=${encodeURIComponent(playerId)}`)
-      )
-      if (next.ok) setRoomState(await next.json())
-    } catch (e) {
-      setPlayError(t.networkError)
+    const { ok, data, errorMessage } = await apiFetch(apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}/draw`), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ playerId }),
+    })
+    if (!ok) {
+      setPlayError(errorMessage || data?.error || t.networkError)
+      return
     }
+    if (data?.drewExploding && !data?.defused) {
+      setShowIExploded(true)
+      setTimeout(() => setShowIExploded(false), 2500)
+    }
+    const next = await apiFetch(apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}?playerId=${encodeURIComponent(playerId)}`))
+    if (next.ok && next.data) setRoomState(next.data)
   }, [playerId, roomId, t.networkError])
 
   const playCard = useCallback(async (cardId, options = {}) => {
@@ -159,48 +140,34 @@ export default function KittensGame() {
     setPlayError('')
     setFavorTarget(null)
     setFoodPairCard(null)
-    try {
-      const res = await fetch(apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}/play`), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playerId, cardId, ...options }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setPlayError(data.error || t.networkError)
-        return
-      }
-      if (data.seenCards) setShowSeeFuture(data.seenCards)
-      const next = await fetch(
-        apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}?playerId=${encodeURIComponent(playerId)}`)
-      )
-      if (next.ok) setRoomState(await next.json())
-    } catch (e) {
-      setPlayError(t.networkError)
+    const { ok, data, errorMessage } = await apiFetch(apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}/play`), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ playerId, cardId, ...options }),
+    })
+    if (!ok) {
+      setPlayError(errorMessage || data?.error || t.networkError)
+      return
     }
+    if (data?.seenCards) setShowSeeFuture(data.seenCards)
+    const next = await apiFetch(apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}?playerId=${encodeURIComponent(playerId)}`))
+    if (next.ok && next.data) setRoomState(next.data)
   }, [playerId, roomId, t.networkError])
 
   const giveFavorCard = useCallback(async (cardId) => {
     if (!playerId || !roomId) return
     setPlayError('')
-    try {
-      const res = await fetch(apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}/favor-give`), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playerId, cardId }),
-      })
-      if (!res.ok) {
-        const data = await res.json()
-        setPlayError(data.error || t.networkError)
-        return
-      }
-      const next = await fetch(
-        apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}?playerId=${encodeURIComponent(playerId)}`)
-      )
-      if (next.ok) setRoomState(await next.json())
-    } catch (e) {
-      setPlayError(t.networkError)
+    const { ok, data, errorMessage } = await apiFetch(apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}/favor-give`), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ playerId, cardId }),
+    })
+    if (!ok) {
+      setPlayError(errorMessage || data?.error || t.networkError)
+      return
     }
+    const next = await apiFetch(apiUrl(`/api/games/kittens/rooms/${encodeURIComponent(roomId)}?playerId=${encodeURIComponent(playerId)}`))
+    if (next.ok && next.data) setRoomState(next.data)
   }, [playerId, roomId, t.networkError])
 
   const myHand = roomState?.myHand || []

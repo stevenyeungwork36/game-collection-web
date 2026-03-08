@@ -5,8 +5,22 @@ const MIN_PLAYERS = 2
 const COUNTDOWN_SECONDS = 5
 const INITIAL_DEFUSE_PER_PLAYER = 1
 const INITIAL_OTHER_CARDS = 3
+const ROOM_IDLE_MS = 30 * 60 * 1000 // 30 min inactive -> delete room
 
 const rooms = new Map()
+
+function touchRoom(room) {
+  room.lastActivityAt = Date.now()
+}
+
+function cleanupInactiveRooms() {
+  const now = Date.now()
+  for (const [id, room] of rooms.entries()) {
+    if ((now - (room.lastActivityAt || 0)) > ROOM_IDLE_MS) {
+      rooms.delete(id)
+    }
+  }
+}
 let playerIdCounter = 1
 
 function generatePlayerId() {
@@ -97,9 +111,11 @@ export function joinRoom(roomId, playerName) {
       pendingFavor: null,
       turnDirection: 1,
       drawFromBottom: false,
+      lastActivityAt: Date.now(),
     }
     rooms.set(roomId, room)
   }
+  touchRoom(room)
 
   const name = (playerName || '').trim().toLowerCase()
   const existing = room.players.find((p) => p.name.toLowerCase() === name)
@@ -142,8 +158,10 @@ export function joinRoom(roomId, playerName) {
 }
 
 export function getRoomState(roomId, playerId) {
+  cleanupInactiveRooms()
   const room = rooms.get(roomId)
   if (!room) return null
+  touchRoom(room)
 
   if (room.state === 'countdown' && Date.now() >= room.countdownEndTime) {
     room.currentRoundPlayers = [...room.players]
@@ -240,6 +258,7 @@ export function playCard(roomId, playerId, cardId, options = {}) {
   const { targetPlayerId, pairCardId } = options || {}
   const room = rooms.get(roomId)
   if (!room || room.state !== 'playing') return { success: false, error: 'Not in play' }
+  touchRoom(room)
   if (room.pendingFavor) return { success: false, error: 'Complete the pending Favor first' }
   const round = room.currentRoundPlayers
   const currentId = round[room.currentPlayerIndex]?.id
@@ -353,6 +372,7 @@ export function playCard(roomId, playerId, cardId, options = {}) {
 export function favorGive(roomId, playerId, cardId) {
   const room = rooms.get(roomId)
   if (!room || room.state !== 'playing') return { success: false, error: 'Not in play' }
+  touchRoom(room)
   const pending = room.pendingFavor
   if (!pending || pending.toPlayerId !== playerId) return { success: false, error: 'Not your turn to give' }
   const hand = room.hands[playerId] || []
@@ -368,6 +388,7 @@ export function favorGive(roomId, playerId, cardId) {
 export function drawCard(roomId, playerId) {
   const room = rooms.get(roomId)
   if (!room || room.state !== 'playing') return { success: false, error: 'Not in play' }
+  touchRoom(room)
   if (room.pendingFavor) return { success: false, error: 'Complete the pending Favor first' }
   const round = room.currentRoundPlayers
   const currentId = round[room.currentPlayerIndex]?.id
@@ -413,6 +434,7 @@ export function drawCard(roomId, playerId) {
 export function ready(roomId, playerId) {
   const room = rooms.get(roomId)
   if (!room) return { success: false, error: 'Room not found' }
+  touchRoom(room)
   if (room.state !== 'result') return { success: false, error: 'Not in result phase' }
   if (!room.currentRoundPlayers?.some((p) => p.id === playerId)) return { success: false, error: 'Not in this round' }
   if (room.readyPlayers.includes(playerId)) return { success: true, state: 'result', readyPlayers: room.readyPlayers }
@@ -438,6 +460,7 @@ export function ready(roomId, playerId) {
 export function requestRestart(roomId, playerId) {
   const room = rooms.get(roomId)
   if (!room) return { success: false, error: 'Room not found' }
+  touchRoom(room)
   if (!room.currentRoundPlayers?.some((p) => p.id === playerId)) return { success: false, error: 'Not in this round' }
 
   room.restartRequested = room.restartRequested || {}

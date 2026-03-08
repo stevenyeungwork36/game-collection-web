@@ -10,6 +10,20 @@ const PLAYER_EMOJIS = ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '
 const MIN_PLAYERS = 3
 const WORD_PHASE_SECONDS = 10
 const COUNTDOWN_SECONDS = 5
+const ROOM_IDLE_MS = 30 * 60 * 1000 // 30 min inactive -> delete room
+
+function touchRoom(room) {
+  room.lastActivityAt = Date.now()
+}
+
+function cleanupInactiveRooms() {
+  const now = Date.now()
+  for (const [id, room] of rooms.entries()) {
+    if ((now - (room.lastActivityAt || 0)) > ROOM_IDLE_MS) {
+      rooms.delete(id)
+    }
+  }
+}
 
 function loadWords() {
   if (!existsSync(WORDS_PATH)) return { pairs: [] }
@@ -71,9 +85,11 @@ export function joinRoom(roomId, playerName) {
       votedOutPlayerId: null,
       result: null,
       readyPlayers: [],
+      lastActivityAt: Date.now(),
     }
     rooms.set(roomId, room)
   }
+  touchRoom(room)
 
   const existing = room.players.find((p) => p.name.toLowerCase() === playerName.trim().toLowerCase())
   if (existing) {
@@ -144,8 +160,10 @@ export function joinRoom(roomId, playerName) {
 }
 
 export function getRoomState(roomId, playerId) {
+  cleanupInactiveRooms()
   const room = rooms.get(roomId)
   if (!room) return null
+  touchRoom(room)
 
   if (room.state === 'countdown' && Date.now() >= room.countdownEndTime) {
     room.state = 'word'
@@ -203,6 +221,7 @@ export function getRoomState(roomId, playerId) {
 export function ready(roomId, playerId) {
   const room = rooms.get(roomId)
   if (!room) return { success: false, error: 'Room not found' }
+  touchRoom(room)
   if (room.state !== 'result') return { success: false, error: 'Not in result phase' }
   if (!room.currentRoundPlayers?.some((p) => p.id === playerId)) return { success: false, error: 'Not in this round' }
   if (room.readyPlayers.includes(playerId)) return { success: true, state: 'result', readyPlayers: room.readyPlayers }
@@ -235,6 +254,7 @@ export function ready(roomId, playerId) {
 export function vote(roomId, playerId, votedForPlayerId) {
   const room = rooms.get(roomId)
   if (!room) return { success: false, error: 'Room not found' }
+  touchRoom(room)
   if (room.state !== 'voting') return { success: false, error: 'Not in voting phase' }
   if (room.votes[playerId] !== undefined) return { success: false, error: 'Already voted' }
   const target = room.currentRoundPlayers?.find((p) => p.id === votedForPlayerId)

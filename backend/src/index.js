@@ -12,6 +12,15 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const app = express()
 const PORT = process.env.PORT || 3001
 
+// Logging: request for API routes
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    const ts = new Date().toISOString()
+    console.log(`[${ts}] ${req.method} ${req.path}`)
+  }
+  next()
+})
+
 app.use(cors({ origin: true }))
 app.use(express.json())
 
@@ -24,6 +33,11 @@ if (existsSync(frontendDist)) {
 // Health check (for Render, load balancers, etc.). Path: GET /api/health
 app.get('/api/health', (req, res) => {
   res.json({ ok: true })
+})
+
+// One-person test game: ping (for deploy testing)
+app.get('/api/games/test/ping', (req, res) => {
+  res.json({ ok: true, message: 'pong', timestamp: new Date().toISOString() })
 })
 
 // Game-specific routes
@@ -42,7 +56,7 @@ app.post('/api/games/sudoku/save', (req, res) => {
     )
     res.json({ ok: true })
   } catch (err) {
-    console.error(err)
+    console.error('[ERROR] POST /api/games/sudoku/save', err)
     res.status(500).json({ error: 'Save failed' })
   }
 })
@@ -55,7 +69,7 @@ app.get('/api/games/sudoku/load', (req, res) => {
     const data = JSON.parse(row.state)
     res.json(data)
   } catch (err) {
-    console.error(err)
+    console.error('[ERROR] GET /api/games/sudoku/load', err)
     res.status(500).json({ error: 'Load failed' })
   }
 })
@@ -73,7 +87,7 @@ app.post('/api/games/imposter/join', (req, res) => {
     }
     res.json(result)
   } catch (err) {
-    console.error(err)
+    console.error('[ERROR] POST /api/games/imposter/join', err)
     res.status(500).json({ error: 'Join failed' })
   }
 })
@@ -91,7 +105,7 @@ app.get('/api/games/imposter/rooms/:roomId', (req, res) => {
     }
     res.json(state)
   } catch (err) {
-    console.error(err)
+    console.error('[ERROR] GET /api/games/imposter/rooms/:roomId', err)
     res.status(500).json({ error: 'Failed to get room' })
   }
 })
@@ -109,7 +123,7 @@ app.post('/api/games/imposter/rooms/:roomId/vote', (req, res) => {
     }
     res.json(result)
   } catch (err) {
-    console.error(err)
+    console.error('[ERROR]', err)
     res.status(500).json({ error: 'Vote failed' })
   }
 })
@@ -125,7 +139,7 @@ app.post('/api/games/imposter/rooms/:roomId/ready', (req, res) => {
     }
     res.json(result)
   } catch (err) {
-    console.error(err)
+    console.error('[ERROR]', err)
     res.status(500).json({ error: 'Ready failed' })
   }
 })
@@ -143,7 +157,7 @@ app.post('/api/games/kittens/join', (req, res) => {
     }
     res.json(result)
   } catch (err) {
-    console.error(err)
+    console.error('[ERROR]', err)
     res.status(500).json({ error: 'Join failed' })
   }
 })
@@ -157,7 +171,7 @@ app.get('/api/games/kittens/rooms/:roomId', (req, res) => {
     if (!state) return res.status(404).json({ error: 'Room not found' })
     res.json(state)
   } catch (err) {
-    console.error(err)
+    console.error('[ERROR]', err)
     res.status(500).json({ error: 'Failed to get room' })
   }
 })
@@ -171,7 +185,7 @@ app.post('/api/games/kittens/rooms/:roomId/play', (req, res) => {
     if (!result.success) return res.status(400).json({ error: result.error })
     res.json(result)
   } catch (err) {
-    console.error(err)
+    console.error('[ERROR]', err)
     res.status(500).json({ error: 'Play failed' })
   }
 })
@@ -185,7 +199,7 @@ app.post('/api/games/kittens/rooms/:roomId/favor-give', (req, res) => {
     if (!result.success) return res.status(400).json({ error: result.error })
     res.json(result)
   } catch (err) {
-    console.error(err)
+    console.error('[ERROR]', err)
     res.status(500).json({ error: 'Favor give failed' })
   }
 })
@@ -199,7 +213,7 @@ app.post('/api/games/kittens/rooms/:roomId/draw', (req, res) => {
     if (!result.success) return res.status(400).json({ error: result.error })
     res.json(result)
   } catch (err) {
-    console.error(err)
+    console.error('[ERROR]', err)
     res.status(500).json({ error: 'Draw failed' })
   }
 })
@@ -213,7 +227,7 @@ app.post('/api/games/kittens/rooms/:roomId/ready', (req, res) => {
     if (!result.success) return res.status(400).json({ error: result.error })
     res.json(result)
   } catch (err) {
-    console.error(err)
+    console.error('[ERROR]', err)
     res.status(500).json({ error: 'Ready failed' })
   }
 })
@@ -227,7 +241,7 @@ app.post('/api/games/kittens/rooms/:roomId/restart', (req, res) => {
     if (!result.success) return res.status(400).json({ error: result.error })
     res.json(result)
   } catch (err) {
-    console.error(err)
+    console.error('[ERROR]', err)
     res.status(500).json({ error: 'Restart failed' })
   }
 })
@@ -243,7 +257,7 @@ app.post('/api/games/bigtwo/join', (req, res) => {
     if (!result.success) return res.status(400).json({ error: result.error })
     res.json(result)
   } catch (err) {
-    console.error(err)
+    console.error('[ERROR]', err)
     res.status(500).json({ error: 'Join failed' })
   }
 })
@@ -257,7 +271,7 @@ app.get('/api/games/bigtwo/rooms/:roomId', (req, res) => {
     if (!state) return res.status(404).json({ error: 'Room not found' })
     res.json(state)
   } catch (err) {
-    console.error(err)
+    console.error('[ERROR]', err)
     res.status(500).json({ error: 'Failed to get room' })
   }
 })
@@ -271,7 +285,7 @@ app.post('/api/games/bigtwo/rooms/:roomId/play', (req, res) => {
     if (!result.success) return res.status(400).json({ error: result.error })
     res.json(result)
   } catch (err) {
-    console.error(err)
+    console.error('[ERROR]', err)
     res.status(500).json({ error: 'Play failed' })
   }
 })
@@ -285,7 +299,7 @@ app.post('/api/games/bigtwo/rooms/:roomId/pass', (req, res) => {
     if (!result.success) return res.status(400).json({ error: result.error })
     res.json(result)
   } catch (err) {
-    console.error(err)
+    console.error('[ERROR]', err)
     res.status(500).json({ error: 'Pass failed' })
   }
 })
@@ -299,7 +313,7 @@ app.post('/api/games/bigtwo/rooms/:roomId/ready', (req, res) => {
     if (!result.success) return res.status(400).json({ error: result.error })
     res.json(result)
   } catch (err) {
-    console.error(err)
+    console.error('[ERROR]', err)
     res.status(500).json({ error: 'Ready failed' })
   }
 })
@@ -315,5 +329,6 @@ if (existsSync(frontendDist)) {
 }
 
 app.listen(PORT, () => {
-  console.log(`Backend running at http://localhost:${PORT}`)
+  console.log(`[START] Backend running on port ${PORT} (env PORT=${process.env.PORT || 'none'})`)
+  console.log(`[START] Health check: GET /api/health`)
 })
