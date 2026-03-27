@@ -2,6 +2,8 @@
 
 This document is meant to be copied into the backend repository so backend-focused agents understand how this frontend calls the API.
 
+**Deployment:** this frontend is intended for **Cloudflare Pages** only (same-origin `/api` via `functions/api/[[path]].js`). Other platforms are not configured in this repo.
+
 ## Frontend stack and runtime assumptions
 
 - Framework: React + Vite.

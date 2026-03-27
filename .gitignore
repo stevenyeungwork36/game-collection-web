@@ -1,10 +1,10 @@
 node_modules/
 dist/
 build/
+.wrangler/
 .env
 .env.local
 *.db
-backend/data/*.db
 .DS_Store
 *.log
 npm-debug.log*

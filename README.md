@@ -1,70 +1,56 @@
 # Game Collection Frontend
 
-Frontend-only repo for the game collection website.
+Single deployment target: **Cloudflare Pages** (this app) + **Cloudflare Worker** (API repo). No other hosting config is maintained in-tree.
 
 ## Structure
 
-- **frontend/** — React + Vite + Bootstrap app.
-- Game UIs live in `frontend/src/games/<game-name>/`.
+- **frontend/** — React + Vite + Bootstrap; games under `frontend/src/games/<name>/`.
+- **functions/** — Pages Functions: `functions/api/[[path]].js` proxies `/api/*` → Worker (`BACKEND_URL`).
 
-## Quick start
+## Local development
 
 ```bash
 npm run install:all
 npm run dev
 ```
 
-- Frontend local URL: `http://localhost:5173`
+- App: `http://localhost:5173`
+- Use `frontend/.env.local` with `VITE_API_BASE_URL=` (empty) so `/api` is proxied to the Worker (see `frontend/vite.config.js`).
+
+## Deploy on Cloudflare Pages
+
+1. **Create a Pages project** → Connect this Git repository.
+2. **Build settings**
+   - Build command: `npm run install:all && npm run build:frontend`
+   - Build output directory: `frontend/dist`
+3. **Environment variables** (Production; repeat for Preview if needed)
+
+   | Variable | Purpose |
+   |----------|---------|
+   | `BACKEND_URL` | Worker origin, e.g. `https://game-collection-backend.sy-dev.workers.dev` (no trailing slash) |
+   | `VITE_API_BASE_URL` | Empty string, or your Pages URL `https://<project>.pages.dev`, so the client calls same-origin `/api/...` |
+
+4. Save and deploy. After deploy, check `https://<project>.pages.dev/api/health` → `{"ok":true}`.
+
+Optional: `wrangler.toml` at repo root documents `pages_build_output_dir` for Wrangler / dashboard alignment. Rename `name` to match your Pages project if you use CLI.
 
 ## Scripts
 
 | Command | Description |
 |--------|-------------|
 | `npm run install:all` | Install root + frontend dependencies |
-| `npm run dev` | Run frontend (Vite) |
-| `npm run build` | Build frontend |
-| `npm run preview` | Preview built frontend |
+| `npm run dev` | Vite dev server |
+| `npm run build` / `npm run build:frontend` | Production build → `frontend/dist` |
+| `npm run preview` | Preview Vite build locally |
 
-## Backend API configuration
+## Direct Worker URL (no Pages proxy)
 
-All API calls go through `frontend/src/api.js` (`apiUrl(path)`).  
-`API_BASE = import.meta.env.VITE_API_BASE_URL || ''`.
-
-### Cloudflare Pages (recommended): same-origin `/api` via proxy
-
-Deploy this repo to **Cloudflare Pages** with:
-
-- **Build command:** `npm run install:all && npm run build:frontend`
-- **Build output directory:** `frontend/dist`
-- **Functions:** this repo includes `functions/api/[[path]].js`, which proxies `/api/*` to your Worker.
-
-In Pages → **Settings → Environment variables**:
-
-| Name | Example |
-|------|--------|
-| `BACKEND_URL` | `https://game-collection-backend.sy-dev.workers.dev` (no trailing slash) |
-| `VITE_API_BASE_URL` | leave **empty** or set to your Pages URL, e.g. `https://<project>.pages.dev` |
-
-Redeploy after changing env vars so Vite bakes `VITE_API_BASE_URL` into the client bundle.
-
-Verify: `https://<project>.pages.dev/api/health` → `{"ok":true}`.
-
-### Local dev (same-origin `/api`)
-
-Use `frontend/.env.local` with **empty** API base so the app calls `/api/...` on the Vite dev server; `vite.config.js` proxies `/api` to the Worker (override with `VITE_DEV_PROXY_API_TARGET` if needed).
+If you point the browser straight at the Worker (not recommended for all networks):
 
 ```env
-VITE_API_BASE_URL=
+VITE_API_BASE_URL=https://<your-worker>.<subdomain>.workers.dev
 ```
 
-### Direct Worker URL (no proxy)
+## API contract for backend work
 
-If you must call the Worker hostname from the browser (not recommended for users on restrictive DNS):
-
-```env
-VITE_API_BASE_URL=https://game-collection-backend.sy-dev.workers.dev
-```
-
-## Backend integration handoff
-
-Use `FRONTEND_BACKEND_CONTEXT.md` as the source of truth for backend API expectations (endpoints, payloads, and client behavior).
+See `FRONTEND_BACKEND_CONTEXT.md` for routes, payloads, and client behavior.

@@ -1,0 +1,6 @@
+# Cloudflare Pages — used by dashboard Git builds and optional `npx wrangler pages dev`.
+# Rename `name` to match your Pages project slug if you use Wrangler CLI.
+
+name = "game-collection-frontend"
+compatibility_date = "2026-03-01"
+pages_build_output_dir = "frontend/dist"

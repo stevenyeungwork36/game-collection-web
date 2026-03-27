@@ -1,7 +1,6 @@
 /**
- * API base URL for backend. Empty = same origin (e.g. when frontend and backend are served together).
- * Set VITE_API_BASE_URL in Netlify (or .env) to your Render backend URL when frontend is on a different domain.
- * Example: https://your-app.onrender.com
+ * API base URL for backend. Empty = same origin (Cloudflare Pages + Functions proxy to Worker, or Vite dev proxy).
+ * Set VITE_API_BASE_URL in Pages env or frontend/.env.local when calling the Worker URL directly.
  */
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
 
