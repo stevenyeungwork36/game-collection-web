@@ -1,11 +1,5 @@
-# Netlify = static hosting only. Your Express backend in this repo does NOT run on Netlify.
-# To use the backend in the same directory, deploy the whole app to a Node host instead, e.g.:
-#   - Render.com: connect repo and use render.yaml, or set build = "npm run install:all && npm run build", start = "npm start", root dir = .
-#   - Railway / Fly.io: same idea — build frontend, then run "npm start" (backend serves frontend from frontend/dist).
-#
-# If you only want frontend on Netlify and backend elsewhere, use the config below and point the frontend to your backend URL.
-# Required: In Netlify UI set env var VITE_API_BASE_URL = your Render URL (e.g. https://game-collection-web.onrender.com),
-# then trigger a new deploy so the build bakes it in.
+# Netlify = static hosting only; API runs elsewhere (e.g. Cloudflare Workers).
+# Set VITE_API_BASE_URL in Netlify to your API origin, then redeploy so Vite bakes it in.
 
 [build]
   # Install deps first (root + frontend); otherwise "vite: not found" because frontend/node_modules is missing
