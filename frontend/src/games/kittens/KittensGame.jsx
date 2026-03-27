@@ -2,7 +2,7 @@
  * Exploding Kittens game: lobby, ready room, play (hand, toss area, draw pile), modals (favor, see future).
  * Uses shared game-toolbar, ready-room layout, and card toss animation on play.
  */
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useLanguage } from '../../context/LanguageContext'
 import { getTranslations } from '../../translations'
 import { apiUrl, apiFetch } from '../../api'
@@ -45,6 +45,9 @@ export default function KittensGame() {
   const [explodingPlayerId, setExplodingPlayerId] = useState(null)
   const [expandedPlayedIndex, setExpandedPlayedIndex] = useState(null)
   const [flyingCard, setFlyingCard] = useState(null)
+  const [tossShowAll, setTossShowAll] = useState(false)
+  const [explosionFlash, setExplosionFlash] = useState(null)
+  const lastExplosionKeyRef = useRef(null)
 
   const join = useCallback(async () => {
     setJoinError('')
@@ -134,6 +137,17 @@ export default function KittensGame() {
   useEffect(() => {
     if (roomState?.state === 'countdown' || roomState?.state === 'playing') setHasPressedReady(false)
   }, [roomState?.state])
+
+  useEffect(() => {
+    const exp = roomState?.lastExplosion
+    if (!exp) return
+    const key = `${exp.playerId}-${exp.at}`
+    if (lastExplosionKeyRef.current === key) return
+    lastExplosionKeyRef.current = key
+    setExplosionFlash(exp)
+    const tid = setTimeout(() => setExplosionFlash(null), 3000)
+    return () => clearTimeout(tid)
+  }, [roomState?.lastExplosion])
 
   const pressReady = useCallback(async () => {
     if (!playerId || !roomId) return
@@ -433,7 +447,7 @@ export default function KittensGame() {
     const totalInRound = roundPlayers.length
 
     return (
-      <div className="kittens-play-wrap">
+      <div className={`kittens-play-wrap${explosionFlash ? ' kittens-explosion-bg' : ''}`}>
         <div className="game-toolbar">
           <div className="game-toolbar-left">
             <span className="game-room-badge">{t.roomLabel}: <strong>{roomId}</strong></span>
@@ -479,6 +493,16 @@ export default function KittensGame() {
             <div className="kittens-explosion-burst" />
             <div className="kittens-explosion-flash" />
             <span className="kittens-explosion-emoji">💥</span>
+          </div>
+        )}
+
+        {explosionFlash && explosionFlash.playerId !== playerId && (
+          <div className="kittens-explosion-notify" aria-live="polite">
+            <span className="kittens-explosion-notify-emoji">💥</span>
+            <span className="kittens-explosion-notify-msg">
+              {explosionFlash.emoji} <strong>{explosionFlash.playerName}</strong>{' '}
+              {lang === 'zh' ? '被爆炸貓炸飛了！' : 'drew an Exploding Kitten!'}
+            </span>
           </div>
         )}
 
@@ -575,45 +599,68 @@ export default function KittensGame() {
           </div>
           <div className="kittens-toss-region">
             <p className="kittens-toss-title">{t.kittensTossTitle}</p>
-            <div className="kittens-toss-list">
-              {(roomState.playedCardsHistory || []).length === 0 ? (
-                <p className="kittens-toss-empty">{t.kittensTossEmpty}</p>
-              ) : (
-                (roomState.playedCardsHistory || []).map((entry, i) => {
-                  const isExpanded = expandedPlayedIndex === i
-                  const cardInfo = getCardInfo(entry.type) || {}
-                  const title = lang === 'zh' ? cardInfo.titleZh : cardInfo.titleEn
-                  const desc = lang === 'zh' ? cardInfo.descZh : cardInfo.descEn
-                  return (
-                    <div
-                      key={i}
-                      className={`kittens-toss-entry ${isExpanded ? 'kittens-toss-entry-expanded' : ''}`}
+            {(() => {
+              const history = roomState.playedCardsHistory || []
+              const TOSS_VISIBLE = 5
+              const hasMore = history.length > TOSS_VISIBLE
+              const visible = tossShowAll ? history : history.slice(-TOSS_VISIBLE)
+              return (
+                <>
+                  {hasMore && (
+                    <button
+                      type="button"
+                      className="kittens-toss-collapse-btn"
+                      onClick={() => setTossShowAll((v) => !v)}
                     >
-                      <button
-                        type="button"
-                        className="kittens-toss-entry-btn"
-                        onClick={() => setExpandedPlayedIndex(isExpanded ? null : i)}
-                        aria-expanded={isExpanded}
-                        title={lang === 'zh' ? '點擊展開牌面' : 'Click to expand card'}
-                      >
-                        <span className="kittens-toss-player">{entry.emoji} {entry.playerName}</span>
-                        <span className="kittens-toss-card-emoji">{entry.cardEmoji || '🂠'}</span>
-                      </button>
-                      {isExpanded && (
-                        <div className="kittens-toss-expanded-card">
-                          <span className="kittens-toss-expanded-emoji">{cardInfo.emoji || entry.cardEmoji || '🂠'}</span>
-                          <span className="kittens-toss-expanded-title">{title || entry.type}</span>
-                          <span className="kittens-toss-expanded-desc">{desc || ''}</span>
-                          <button type="button" className="kittens-toss-expanded-close" onClick={(e) => { e.stopPropagation(); setExpandedPlayedIndex(null) }}>
-                            {lang === 'zh' ? '關閉' : 'Close'}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })
-              )}
-            </div>
+                      {tossShowAll
+                        ? (lang === 'zh' ? '收起舊記錄 ▲' : 'Collapse ▲')
+                        : (lang === 'zh' ? `顯示全部 ${history.length} 筆 ▼` : `Show all ${history.length} ▼`)}
+                    </button>
+                  )}
+                  <div className="kittens-toss-list">
+                    {visible.length === 0 ? (
+                      <p className="kittens-toss-empty">{t.kittensTossEmpty}</p>
+                    ) : (
+                      visible.map((entry, _vi) => {
+                        const i = tossShowAll ? _vi : history.length - TOSS_VISIBLE + _vi + Math.max(0, TOSS_VISIBLE - history.length)
+                        const realIdx = tossShowAll ? _vi : history.length - visible.length + _vi
+                        const isExpanded = expandedPlayedIndex === realIdx
+                        const cardInfo = getCardInfo(entry.type) || {}
+                        const title = lang === 'zh' ? cardInfo.titleZh : cardInfo.titleEn
+                        const desc = lang === 'zh' ? cardInfo.descZh : cardInfo.descEn
+                        return (
+                          <div
+                            key={realIdx}
+                            className={`kittens-toss-entry ${isExpanded ? 'kittens-toss-entry-expanded' : ''}`}
+                          >
+                            <button
+                              type="button"
+                              className="kittens-toss-entry-btn"
+                              onClick={() => setExpandedPlayedIndex(isExpanded ? null : realIdx)}
+                              aria-expanded={isExpanded}
+                              title={lang === 'zh' ? '點擊展開牌面' : 'Click to expand card'}
+                            >
+                              <span className="kittens-toss-player">{entry.emoji} {entry.playerName}</span>
+                              <span className="kittens-toss-card-emoji">{entry.cardEmoji || '🂠'}</span>
+                            </button>
+                            {isExpanded && (
+                              <div className="kittens-toss-expanded-card">
+                                <span className="kittens-toss-expanded-emoji">{cardInfo.emoji || entry.cardEmoji || '🂠'}</span>
+                                <span className="kittens-toss-expanded-title">{title || entry.type}</span>
+                                <span className="kittens-toss-expanded-desc">{desc || ''}</span>
+                                <button type="button" className="kittens-toss-expanded-close" onClick={(e) => { e.stopPropagation(); setExpandedPlayedIndex(null) }}>
+                                  {lang === 'zh' ? '關閉' : 'Close'}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })
+                    )}
+                  </div>
+                </>
+              )
+            })()}
           </div>
         </div>
 
@@ -688,38 +735,84 @@ export default function KittensGame() {
         <div className="kittens-hand">
           <div className="kittens-hand-cards">
             {myHand.map((card) => {
+              const isFood = isFoodType(card.type)
               const playable = canPlayAction && playableTypes.has(card.type) && card.type !== 'exploding_kitten' && card.type !== 'defuse'
-              const isFoodPair = isFoodType(card.type) && foodPairCard && (foodPairCard.id === card.id || (roomState.myHand || []).some((c) => c.id === foodPairCard.id && c.type === card.type))
-              const canPlayThis = playable && (!isFoodType(card.type) || (foodPairCard && foodPairCard.type === card.type && foodPairCard.id !== card.id))
+
+              // Food card states
+              const isSelectedFirst = isFood && foodPairCard?.id === card.id
+              const hasPairForThis = isFood && foodPairCard && foodPairCard.type === card.type && foodPairCard.id !== card.id
+
+              const cardClasses = [
+                'kittens-card',
+                playable ? 'playable' : '',
+                isSelectedFirst ? 'kittens-card-food-selected' : '',
+                hasPairForThis ? 'kittens-card-can-pair' : '',
+              ].filter(Boolean).join(' ')
+
               return (
-                <div
-                  key={card.id}
-                  className={`kittens-card ${playable ? 'playable' : ''} ${isFoodPair ? 'kittens-card-can-pair' : ''}`}
-                >
+                <div key={card.id} className={cardClasses}>
                   <span className="kittens-card-emoji">{card.emoji}</span>
                   <span className="kittens-card-title">{lang === 'zh' ? card.titleZh : card.titleEn}</span>
                   <span className="kittens-card-desc">{lang === 'zh' ? card.descZh : card.descEn}</span>
-                  {isFoodType(card.type) && playable && (
-                    <p className="kittens-food-hint">{t.kittensFoodSelectPair}</p>
-                  )}
-                  {canPlayThis && (
+
+                  {/* Non-food playable cards */}
+                  {playable && !isFood && card.type !== 'favor' && (
                     <button
                       type="button"
                       className="kittens-card-play"
                       onClick={() => {
-                        if (card.type === 'favor') setShowFavorPlayerModal(card.id)
-                        else if (isFoodType(card.type) && foodPairCard) {
-                          setFlyingCard({ emoji: card.emoji })
-                          playCard(card.id, { pairCardId: foodPairCard.id }, () => setTimeout(() => setFlyingCard(null), TOSS_ANIMATION_MS))
-                        }
-                        else if (isFoodType(card.type)) setFoodPairCard(foodPairCard ? null : card)
-                        else {
-                          setFlyingCard({ emoji: card.emoji })
-                          playCard(card.id, {}, () => setTimeout(() => setFlyingCard(null), TOSS_ANIMATION_MS))
-                        }
+                        setFlyingCard({ emoji: card.emoji })
+                        playCard(card.id, {}, () => setTimeout(() => setFlyingCard(null), TOSS_ANIMATION_MS))
                       }}
                     >
                       {t.kittensPlay}
+                    </button>
+                  )}
+
+                  {/* Favor card */}
+                  {playable && card.type === 'favor' && (
+                    <button
+                      type="button"
+                      className="kittens-card-play"
+                      onClick={() => setShowFavorPlayerModal(card.id)}
+                    >
+                      {t.kittensPlay}
+                    </button>
+                  )}
+
+                  {/* Food card: no pair selected yet → "Select" */}
+                  {playable && isFood && !isSelectedFirst && !hasPairForThis && (
+                    <button
+                      type="button"
+                      className="kittens-card-play kittens-card-play-select"
+                      onClick={() => setFoodPairCard(card)}
+                    >
+                      {lang === 'zh' ? '選牌' : 'Select'}
+                    </button>
+                  )}
+
+                  {/* Food card: this IS the selected first card → "Deselect" */}
+                  {playable && isSelectedFirst && (
+                    <button
+                      type="button"
+                      className="kittens-card-play kittens-card-play-deselect"
+                      onClick={() => setFoodPairCard(null)}
+                    >
+                      {lang === 'zh' ? '取消' : 'Cancel'}
+                    </button>
+                  )}
+
+                  {/* Food card: pair card available → "Play pair" */}
+                  {playable && hasPairForThis && (
+                    <button
+                      type="button"
+                      className="kittens-card-play kittens-card-play-pair"
+                      onClick={() => {
+                        setFlyingCard({ emoji: card.emoji })
+                        playCard(card.id, { pairCardId: foodPairCard.id }, () => setTimeout(() => setFlyingCard(null), TOSS_ANIMATION_MS))
+                      }}
+                    >
+                      {lang === 'zh' ? '出牌組' : 'Play pair'}
                     </button>
                   )}
                 </div>

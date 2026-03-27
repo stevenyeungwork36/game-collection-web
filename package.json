@@ -2,18 +2,11 @@
   "name": "game-collection-web",
   "private": true,
   "version": "1.0.0",
-  "description": "Game collection website with frontend, backend, and lightweight DB",
+  "description": "Game collection frontend (React + Vite)",
   "scripts": {
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "dev:frontend": "cd frontend && npm run dev",
-    "dev:backend": "cd backend && npm run dev",
-    "build": "npm run build:frontend && npm run build:backend",
-    "build:frontend": "cd frontend && npm run build",
-    "build:backend": "cd backend && npm run build",
-    "start": "cd backend && npm start",
-    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install"
-  },
-  "devDependencies": {
-    "concurrently": "^8.2.2"
+    "dev": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "preview": "cd frontend && npm run preview",
+    "install:all": "npm install && cd frontend && npm install"
   }
 }
