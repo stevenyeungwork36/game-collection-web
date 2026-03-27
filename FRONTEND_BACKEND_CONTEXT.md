@@ -10,6 +10,8 @@ This document is meant to be copied into the backend repository so backend-focus
   - `API_BASE = import.meta.env.VITE_API_BASE_URL || ''`
   - Final URL is `${API_BASE}${path}`.
 - If `VITE_API_BASE_URL` is unset, frontend assumes same-origin `/api/...`.
+- **Cloudflare Pages:** use same-origin `/api` with a Pages Function proxy (`functions/api/[[path]].js`) forwarding to the Worker `BACKEND_URL`, so browsers never resolve `*.workers.dev` directly (avoids DNS issues on some networks).
+- **Local dev:** with empty `VITE_API_BASE_URL`, Vite proxies `/api` to the Worker (`VITE_DEV_PROXY_API_TARGET` or default Worker URL in `vite.config.js`).
 - Connection test page uses direct `fetch(apiUrl('/api/games/test/ping'))`.
 
 ## Global API expectations
@@ -17,7 +19,7 @@ This document is meant to be copied into the backend repository so backend-focus
 - JSON responses for success and errors.
 - Typical error body shape used by UI: `{ "error": "message" }`.
 - Many pages poll room state repeatedly (`GET .../rooms/:roomId?playerId=...`) and depend on stable shape.
-- CORS must allow browser frontend origin.
+- CORS must allow browser frontend origin when the browser calls the Worker directly. With a same-origin Pages proxy, the browser only talks to Pages; server-side `fetch` from the Function to the Worker does not use browser CORS.
 
 ## Health/test endpoints used by frontend
 

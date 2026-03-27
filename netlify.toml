@@ -1,5 +1,13 @@
 # Netlify = static hosting only; API runs elsewhere (e.g. Cloudflare Workers).
-# Set VITE_API_BASE_URL in Netlify to your API origin, then redeploy so Vite bakes it in.
+# Default: set VITE_API_BASE_URL to your Worker URL, then redeploy.
+#
+# Optional same-origin /api proxy (avoids browsers resolving *.workers.dev):
+# [[redirects]]
+#   from = "/api/*"
+#   to = "https://game-collection-backend.sy-dev.workers.dev/api/:splat"
+#   status = 200
+#   force = true
+# Then set VITE_API_BASE_URL to "" or your Netlify site URL and rebuild.
 
 [build]
   # Install deps first (root + frontend); otherwise "vite: not found" because frontend/node_modules is missing
